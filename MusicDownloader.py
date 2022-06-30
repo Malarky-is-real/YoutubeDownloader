@@ -11,6 +11,9 @@ from tkinter import  *
 from tkinter import DISABLED, Widget, ttk, Grid
 from tkinter.messagebox import showinfo
 
+#ffmpeg
+import ffmpeg
+
 #PIL
 from PIL import Image, ImageTk, ImageSequence
 
@@ -33,9 +36,6 @@ import random
 #import MTkinter
 from mttkinter import mtTkinter as tk
 from mttkinter import *
-#Gif Stuff
-
-
 
 
 #Gets the urls of all the videos in the list
@@ -57,8 +57,8 @@ exists = []
 err = []
 
 def Downloader():
-    global state
-
+    global state, new, exists, err
+    downloading()
     downloadBtn["state"] = "disabled"
     PL_link = ytLink.get()
     PL_Link = PL_link.replace(r"\"", "/")
@@ -68,14 +68,7 @@ def Downloader():
     folder = outputPath.get()
     
     #print(f'Downloading: {p.title}')
-
-    
-    #for every url in the list url
-    #i = 0
-    #i2 = 0
-    global new, exists, err
   
-    
     #for every vid in p.videos 
     Bool = None
     if clicked.get() == "mp4":
@@ -86,7 +79,10 @@ def Downloader():
     for vid in p.videos:
         try:
             DV = vid.streams.filter(only_audio=Bool).first().download(output_path=folder)
-            #print(DV)
+            mp3_file = folder + "audio.mp3"
+            cmd = "ffmpeg -i {} -vn {}".format(DV, mp3_file)
+            os.system(cmd)
+            os.system("afplay {}".format(mp3_file) )
             base,ext = os.path.splitext(DV)
             newfile = base + clicked.get()
             os.rename(DV, newfile)
@@ -108,7 +104,6 @@ def threaders():
     titles = PLChecker()
     threads = []
     for t in titles:
-        #print(t)
         t = threading.Thread(target=Downloader)
         threads.append(t)
         t.start()
@@ -151,10 +146,7 @@ linkEntry.focus()
 def show():
     label.config(text = clicked.get())
 
-options = [
-    ".mp3",
-    ".mp4"
-]
+options = [".mp3", ".mp4"]
 clicked = StringVar()
 
 clicked.set( ".mp3" )
@@ -184,7 +176,6 @@ browser.grid(row=3, column=3)
 downloadBtn = ttk.Button(root, text="Download", command=threaders)
 downloadBtn.grid(row=4, column=2)
 
-step = 1
 count = 0
 moveinc = 0
 movement = None
@@ -192,14 +183,21 @@ states = ["moving", "not_moving"]
 moving_state = ["move_left", "move_right"]
 idle_state = ["sleep", "idle"]
 Finish = ["Downloading", "Finished"]
+moving_file = ['C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonFlyingFlipped.gif', 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonFlying.gif']
+idle_file = ['C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonSleeping.gif', 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonFlyingFlipped.gif']
+sleep_file = 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonSleepingIdle.gif'
+complete_file = ["C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DownloadingDevelon.gif",'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonComplete.gif']
 
+def zeroOut():
+    global state, idle_action, movement, status, moveinc, count, moveinc, file, fileUsed, info, frames
+    status = None
+    idle_action = None
+    movement = None
+    finished = None
+    count = 0
 
 def eventChange():
-    global state
-    global idle_action
-    global movement
-    global status
-    global moveinc
+    global state, idle_action, movement, status, moveinc
     #Develon Broad states
     state = None
     state = random.choice(states)
@@ -217,68 +215,46 @@ def eventChange():
         if movement == "move_left":
             moveinc = -1
             status = 1
-            #print(movement)
 
         elif movement == "move_right":
             moveinc = 1
             status = 1
-            #print(movement)
         
     #if not moving then chooese between specific idling states
     else: 
         idle_action = random.choice(idle_state)
         if idle_action == "sleep":
-            #print("sleeping")
+   
             moveinc = 0
             status = 0
         elif idle_action == "idle":
-            #print("idle")
+ 
             moveinc = 0
 
 
 def animation(count):
+    global anim
     frames = info.n_frames
     im2 = imgs[count]
     count += 1
     if count == frames:
         count = 0
 
-
-
-
-
     canvas.itemconfig(develon, image=im2)
-    global anim
-
     anim = root.after(100, lambda: animation(count))
 
 
 
-#Variables
 
-
-moving_file = ['C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonFlyingFlipped.gif', 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonFlying.gif']
-
-
-idle_file = ['C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonSleeping.gif', 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonFlyingFlipped.gif',]
-
-sleep_file = 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonSleepingIdle.gif'
-complete_file = 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonComplete.gif'
 
 
 
 def fileconfigs():
     #Globalization
-    global file
-    global fileUsed
-    global state
-    global status
-    global idle_action
-    global count
+    global file, fileUsed, state, status, idle_action, count
 
     file = None
     fileUsed = 0
-
     #File specific checker
     if state == "moving":
         
@@ -300,52 +276,45 @@ def fileconfigs():
             file = idle_file[fileUsed]
 
 
-
-
-def createcanv():
-    global frames
-    global info
-    global imgs
-    global develon
+def imageFileConfig():
+    global frames, info, imgs
     info = Image.open(file)
     frames = info.n_frames
+    imgs = [PhotoImage(file=file, format=f"gif -index {i}") for i in range(frames)]
+    myImage = PhotoImage(file=file)
+    canvas.itemconfigure(develon, image=myImage )
 
+def createcanv():
+    global frames, info, imgs, develon
+    info = Image.open(file)
+    frames = info.n_frames
     imgs = [PhotoImage(file=file, format=f'gif -index {i}') for i in range(frames)]
     myImage = PhotoImage(file=file)
     develon = canvas.create_image(startPosX-64,startPosY, image=myImage)
 
 def next_gif():
-    global imgs 
-    global fileUsed
-    global file         
-    global count
+    global imgs, fileUsed, file, count
     if state == "moving": 
         if movement == "move_left":
             count = 0
             fileUsed = 1
             file = moving_file[fileUsed]
             canvas.move(develon, -4, 0)
-            #print("move right")
 
         elif movement == "move_right":
             count = 0
             fileUsed = 0
             file = moving_file[fileUsed]
             canvas.move(develon, 4, 0)
-            #print("move right")
-    
+
     elif state == "not_moving":
         if idle_action == "sleep":
             file = sleep_file
-    
+    imageFileConfig()
+
 
         
-    info = Image.open(file)
-    frames = info.n_frames
-    imgs = [PhotoImage(file=file, format=f"gif -index {i}") for i in range(frames)]
     
-    myImage = PhotoImage(file=file)
-    canvas.itemconfigure(develon, image=myImage )
     
 
 
@@ -379,39 +348,6 @@ def move():
             next_gif()
 
 
-
-
-def zeroOut():
-    
-    
-    frames = info.n_frames
-
-def finishAnim():
-    global imgs
-    idle_action=None
-    movement=None
-    status=0
-    moveinc=None
-    count = 0
-    print("pleasework god damn it")
-    count = 0
-    info = Image.open(complete_file)
-    frames = info.n_frames
-    imgs = [PhotoImage(file=complete_file, format=f"gif -index {i}") for i in range(frames)]
-    myImage = PhotoImage(file=complete_file)
-    canvas.itemconfigure(develon, image=myImage )
-    animation(count)
-
-def finish():
-    zeroOut()
-    root.after_cancel(eventChanger)
-    root.after_cancel(anim) 
-    finishAnim()
-    showinfo(title=finish, message=f"Videos have been sucessfully downloaded")
-    downloadBtn["state"] = "enabled"
-    time.sleep(10000)
-    eventChanger()
-
 def eventStarter():
     eventChange()
     fileconfigs()
@@ -419,7 +355,8 @@ def eventStarter():
     animation(count)
     move()
 
-def eventChanger():
+def eventChanger(): 
+    global evnchng
     eventChange()
     fileconfigs()
     next_gif()
@@ -427,14 +364,43 @@ def eventChanger():
     root.after_cancel(anim)
     animation(count)
     move()
-    #print("Changing to " + str(state) + " " + " " + str(idle_action)  + " " + str(movement))
-    root.after(2000, eventChanger)
+    evnchng = root.after(2000, lambda: eventChanger())
+
+def downloading():
+    global count, file, fileUsed, moveinc
+    zeroOut()
+    root.after_cancel(evnchng)
+    root.after_cancel(anim) 
+    moveinc = 0
+    count = 0
+    move()
+    file = complete_file
+    fileUsed = 0
+    file = complete_file[fileUsed]
+    imageFileConfig()
+    animation(count)
 
 
+def finish():
+    zeroOut()
+    root.after_cancel(evnchng)
+    root.after_cancel(anim) 
+    finishAnim()
+    animation(count)
+    showinfo(title=finish, message="Videos have been sucessfully downloaded")
+    downloadBtn["state"] = "enabled"
+    time.sleep(5)
+    eventChanger()
 
-
-
-
+def finishAnim():
+    global count, file, fileUsed
+    count = 0
+    file = complete_file
+    fileUsed = 1
+    file = file[fileUsed]
+    print("pleasework god damn it")
+    imageFileConfig()
+    
 
 canvas_width = 200
 canvas_height = 100
@@ -445,10 +411,7 @@ startPosX=100
 startPosY=50
 
 #Calling functions
-
 eventStarter()
 eventChanger()
-
-
 
 root.mainloop()

@@ -87,6 +87,14 @@ def checker():
     elif titles[i] not in r: 
         print( titles[i] + " not downloaded \n")
 """
+"""
+Cancels animation
+def pause_anim():
+    button1['state'] = NORMAL
+    button2['state'] = tk.DISABLED
+    root.after_cancel(anim)
+
+"""
 
 """
 Warning before starting download
