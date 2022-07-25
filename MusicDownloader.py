@@ -12,16 +12,18 @@ from tkinter import DISABLED, Widget, ttk, Grid
 from tkinter.messagebox import showinfo
 
 #ffmpeg
-import ffmpeg
+import moviepy.editor as mp
 
 #PIL
-from PIL import Image, ImageTk, ImageSequence
+from PIL import Image
 
 #Imports time
 import time
 
 #Importing Pytube
 from pytube import YouTube, Playlist
+from pytube import * 
+
 from pyyoutube import Api
 
 
@@ -40,61 +42,53 @@ from mttkinter import *
 
 #Gets the urls of all the videos in the list
 def PLChecker():
+    global p
     PL_link = ytLink.get()
-    PL_Link = PL_link.replace(r"\"", "/")
-    global p 
+    #PL_link = PL_link.replace(r"\"", "/")
     p = Playlist(PL_link)
     
-    folder = outputPath.get()
+    
     titles = []
+    #if isinstance(p):
     for vid in p.videos:
-        #Tries to download the videos
         titles.append(vid)
-        return titles
+    
+        
 
-new = []
-exists = []
-err = []
+    #else: 
+        #titles.append(vid)
+    print(titles)
+    return titles
 
 def Downloader():
-    global state, new, exists, err
-    downloading()
+    global state
+    
     downloadBtn["state"] = "disabled"
-    PL_link = ytLink.get()
-    PL_Link = PL_link.replace(r"\"", "/")
-    global p 
-    p = Playlist(PL_link)
+    
+    downloading()
     
     folder = outputPath.get()
-    
-    #print(f'Downloading: {p.title}')
-  
     #for every vid in p.videos 
     Bool = None
-    if clicked.get() == "mp4":
-        Bool = False
-
-    elif clicked.get() == "mp3":
-        Bool = True
+    
     for vid in p.videos:
         try:
-            DV = vid.streams.filter(only_audio=Bool).first().download(output_path=folder)
-            mp3_file = folder + "audio.mp3"
-            cmd = "ffmpeg -i {} -vn {}".format(DV, mp3_file)
-            os.system(cmd)
-            os.system("afplay {}".format(mp3_file) )
-            base,ext = os.path.splitext(DV)
-            newfile = base + clicked.get()
-            os.rename(DV, newfile)
+            DV = vid.streams.filter(progressive=True).get_highest_resolution().download(output_path=folder)
+            print(DV)
+            base = os.path.splitext(DV)
+            print(base)
+           
+            my_clip = mp.VideoFileClip(base[0] + ".mp4") 
+            my_clip.audio.write_audiofile(base[0] + ".mp3")
+            my_clip.close()
             
         
         except FileExistsError:
-            exists.append(newfile)
             os.remove(DV)
-        
-            
+    
         else:
-            new.append(newfile)
+            os.remove(DV)
+
     print("Done")
     finish()
 
@@ -103,15 +97,11 @@ def Downloader():
 def threaders():
     titles = PLChecker()
     threads = []
-    for t in titles:
-        t = threading.Thread(target=Downloader)
-        threads.append(t)
-        t.start()
-    
+    t = threading.Thread(target=Downloader)
+    threads.append(t)
+    t.start()
 
-     
 
-    
 root = tk.Tk()
 #Setting the title, background color, and size of the tkinter window and
 root_height = 280
@@ -143,9 +133,6 @@ linkEntry.grid(row=2,column=2)
 linkEntry.focus()
 
 #File exstension chooser
-def show():
-    label.config(text = clicked.get())
-
 options = [".mp3", ".mp4"]
 clicked = StringVar()
 
@@ -183,14 +170,19 @@ states = ["moving", "not_moving"]
 moving_state = ["move_left", "move_right"]
 idle_state = ["sleep", "idle"]
 Finish = ["Downloading", "Finished"]
-moving_file = ['C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonFlyingFlipped.gif', 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonFlying.gif']
-idle_file = ['C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonSleeping.gif', 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonFlyingFlipped.gif']
-sleep_file = 'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonSleepingIdle.gif'
-complete_file = ["C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DownloadingDevelon.gif",'C:/Users/Anthony/Documents/Downloads/Pixel Art/Not-Mine-Pixel-Art/BubbleBobble/PNGs/DevelonComplete.gif']
+moving_file = ['images/DevelonFlyingFlipped.gif', 'images/DevelonFlying.gif']
+idle_file = ['images/DevelonSleeping.gif', 'images/DevelonFlyingFlipped.gif']
+sleep_file = 'images/DevelonSleepingIdle.gif'
+complete_file = ["images/DownloadingDevelon.gif",'images/DevelonComplete.gif']
 
 def zeroOut():
     global state, idle_action, movement, status, moveinc, count, moveinc, file, fileUsed, info, frames
     status = None
+    moveinc = 0
+    file = None
+    fileUsed = None
+    info = None
+    frames = None
     idle_action = None
     movement = None
     finished = None
@@ -257,7 +249,6 @@ def fileconfigs():
     fileUsed = 0
     #File specific checker
     if state == "moving":
-        
         if movement == "move_right":
             fileUsed = 0
             file = moving_file[fileUsed]
@@ -271,6 +262,7 @@ def fileconfigs():
         if idle_action == "sleep":
             fileUsed = 0
             file = idle_file[fileUsed]
+        
         elif idle_action == "idle":
             fileUsed = 1
             file = idle_file[fileUsed]
@@ -312,13 +304,6 @@ def next_gif():
             file = sleep_file
     imageFileConfig()
 
-
-        
-    
-    
-
-
-
 def move():
     global movement 
     xinc = 0
@@ -347,7 +332,6 @@ def move():
                 movement = "move_left"
             next_gif()
 
-
 def eventStarter():
     eventChange()
     fileconfigs()
@@ -369,15 +353,13 @@ def eventChanger():
 def downloading():
     global count, file, fileUsed, moveinc
     zeroOut()
-    root.after_cancel(evnchng)
     root.after_cancel(anim) 
-    moveinc = 0
-    count = 0
-    move()
     file = complete_file
+    
     fileUsed = 0
-    file = complete_file[fileUsed]
+    file = file[fileUsed]
     imageFileConfig()
+    count = 0
     animation(count)
 
 

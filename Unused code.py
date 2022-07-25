@@ -1,5 +1,6 @@
 
 """
+C:\Users\Anthony\AppData\Local\Programs\Python\Python310\Scripts
 #Testing
 t = open("downloadedSongs.txt", "r", encoding="utf-8")
 if "(Unreleased) Perfect Cell Vs SSJ Goku" in t.read():
@@ -87,6 +88,13 @@ def checker():
     elif titles[i] not in r: 
         print( titles[i] + " not downloaded \n")
 """
+
+"""
+Was supposed to show the selected exstension file from the drop down menu
+def show():
+    label.config(text = clicked.get())
+"""
+
 """
 Cancels animation
 def pause_anim():
