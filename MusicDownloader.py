@@ -1,6 +1,8 @@
 #This program will get songs from a youtube playlist and then download them to a music folder.
 
 #Import Threading 
+from asyncio import threads
+from re import I
 import threading
 
 #Import Tkinter
@@ -17,6 +19,8 @@ import moviepy.editor as mp
 #PIL
 from PIL import Image
 
+import requests
+
 #Imports time
 import time
 
@@ -26,6 +30,9 @@ from pytube import *
 
 from pyyoutube import Api
 
+#Importing eye3d
+import eyed3
+from eyed3.id3.frames import ImageFrame
 
 #Importing OS
 import os
@@ -42,64 +49,142 @@ from mttkinter import *
 
 #Gets the urls of all the videos in the list
 def PLChecker():
-    global p
+    global p, songtitles, PL_link
+    PL_link = None
+    p = None
     PL_link = ytLink.get()
+    playlistCheck = None
+    
     #PL_link = PL_link.replace(r"\"", "/")
-    p = Playlist(PL_link)
+    if "list" in PL_link:
+        p = Playlist(PL_link)
+
+        playlistCheck =  True
+    else:
+        p = YouTube(PL_link)
+        playlistCheck =  False
+
+    songtitles = []
+    if playlistCheck == True:
+        for vid in p.videos:
+            songtitles.append(vid)
+    else:
+        songtitles.append(PL_link)
+
+    return songtitles
+
+def downloadThumbnail(url: str, dest_folder: str, fileName: str):
+    global file_path
+    if not os.path.exists(dest_folder):
+        os.makedirs(dest_folder)  # create folder if it does not exist
     
-    
-    titles = []
-    #if isinstance(p):
-    for vid in p.videos:
-        titles.append(vid)
-    
+    filename = fileName.split('/')[-1].replace(" ", "_")  # be careful with file names
+    file_path = os.path.join(dest_folder, filename)
+
+    r = requests.get(url, stream=True)
+    if r.ok:
+        print("saving to", os.path.abspath(file_path))
+        with open(file_path, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024 * 8):
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+                    os.fsync(f.fileno())
+    else:  # HTTP status code 4XX/5XX
+        print("Download failed: status code {}\n{}".format(r.status_code, r.text))
+    return file_path
         
 
-    #else: 
-        #titles.append(vid)
-    print(titles)
-    return titles
 
-def Downloader():
+def thumbnailChanger(video, path):
+    audiofile = eyed3.load(video)
+    if (audiofile.tag == None):
+        audiofile.initTage()
+
+    audiofile.tag.images.set(3, open(path, 'rb').read(), 'image/jpeg')
+    audiofile.tag.save(version=eyed3.id3.ID3_V2_3)
+
+
+
+
+def Downloader(i):
     global state
-    
     downloadBtn["state"] = "disabled"
-    
-    downloading()
-    
+    #downloading()
     folder = outputPath.get()
     #for every vid in p.videos 
-    Bool = None
-    
-    for vid in p.videos:
+    if "list" in PL_link:
         try:
+            vid = songtitles[0-i]
             DV = vid.streams.filter(progressive=True).get_highest_resolution().download(output_path=folder)
-            print(DV)
             base = os.path.splitext(DV)
-            print(base)
-           
+            
+        except FileExistsError:
+            os.remove(DV)
+            
+        else:
+            if clicked.get() == ".mp3":
+                my_clip = mp.VideoFileClip(base[0] + ".mp4") 
+                my_clip.audio.write_audiofile(base[0] + ".mp3")
+                my_clip.close()
+                
+                os.remove(DV)
+                vidName = vid.title
+                thumbnail = vid.thumbnail_url 
+                f = downloadThumbnail(thumbnail, "thumbnails", vidName)
+                thumbnailChanger(base[0] + ".mp3", f)
+            
+    
+
+    else: 
+        try:
+            DV = p.streams.filter(progressive=True).get_highest_resolution().download(output_path=folder)
+            base = os.path.splitext(DV)
+        except FileExistsError:
+            os.remove(DV)
+
+        else:
             my_clip = mp.VideoFileClip(base[0] + ".mp4") 
             my_clip.audio.write_audiofile(base[0] + ".mp3")
             my_clip.close()
-            
         
-        except FileExistsError:
             os.remove(DV)
-    
-        else:
-            os.remove(DV)
+            vidName = p.title
+            thumbnail = p.thumbnail_url 
+            f = downloadThumbnail(thumbnail, "thumbnails", vidName)
+            thumbnailChanger(base[0] + ".mp3", f)
+            os.remove(f)
+            
+    threadAliveChecker()
 
-    print("Done")
-    finish()
 
 
 #Threads   
 def threaders():
-    titles = PLChecker()
+    global threads, t
+    musictitles = PLChecker()
     threads = []
-    t = threading.Thread(target=Downloader)
-    threads.append(t)
-    t.start()
+    i = 0
+    for t in musictitles:
+        t = threading.Thread(target= lambda: Downloader(i))
+        threads.append(t)
+        t.start()
+        
+        i += 1
+
+
+def threadAliveChecker():
+    global threads
+    
+    for t in threads:
+            t.handled = False
+            if not t.is_alive():
+                t.handled = True
+    threads = [t for t in threads if not t.handled]
+    if len(threads) == 1:
+        finish()
+        threads.clear()
+
 
 
 root = tk.Tk()
@@ -169,7 +254,6 @@ movement = None
 states = ["moving", "not_moving"]
 moving_state = ["move_left", "move_right"]
 idle_state = ["sleep", "idle"]
-Finish = ["Downloading", "Finished"]
 moving_file = ['images/DevelonFlyingFlipped.gif', 'images/DevelonFlying.gif']
 idle_file = ['images/DevelonSleeping.gif', 'images/DevelonFlyingFlipped.gif']
 sleep_file = 'images/DevelonSleepingIdle.gif'
@@ -185,7 +269,6 @@ def zeroOut():
     frames = None
     idle_action = None
     movement = None
-    finished = None
     count = 0
 
 def eventChange():
@@ -198,7 +281,6 @@ def eventChange():
     status = None
     idle_action = None
     movement = None
-    finished = None
     #Checks if state is movement and then chooese a specific state from moving state
 
     if state == "moving":
@@ -236,15 +318,9 @@ def animation(count):
     anim = root.after(100, lambda: animation(count))
 
 
-
-
-
-
-
 def fileconfigs():
     #Globalization
     global file, fileUsed, state, status, idle_action, count
-
     file = None
     fileUsed = 0
     #File specific checker
@@ -274,7 +350,7 @@ def imageFileConfig():
     frames = info.n_frames
     imgs = [PhotoImage(file=file, format=f"gif -index {i}") for i in range(frames)]
     myImage = PhotoImage(file=file)
-    canvas.itemconfigure(develon, image=myImage )
+    canvas.itemconfigure(develon, image=myImage)
 
 def createcanv():
     global frames, info, imgs, develon
