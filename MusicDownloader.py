@@ -2,16 +2,17 @@
 
 #Import Threading 
 from asyncio import threads
-from sre_parse import State
+import queue
 import threading
 
 #Import Tkinter
 import tkinter as tk
-
 from tkinter.ttk import *
 from tkinter import  *
 from tkinter import DISABLED, Widget, ttk, Grid,filedialog
 from tkinter.messagebox import showinfo
+from tkinter.scrolledtext import ScrolledText
+from webbrowser import get
 
 #ffmpeg
 import moviepy.editor as mp
@@ -19,7 +20,7 @@ import moviepy.editor as mp
 #PIL
 from PIL import Image
 
-import wget
+#URLlib import
 import urllib.request
 import urllib
 
@@ -32,12 +33,12 @@ from pytube import *
 
 #Importing eye3d
 import eyed3
-from eyed3.id3.frames import ImageFrame
+
 
 #Importing OS
 import os
-from os import link, listdir
-from os.path import isfile, join
+from os import link
+import shutil
 
 #Importing Random
 import random
@@ -49,13 +50,15 @@ from mttkinter import *
 
 #Gets the urls of all the videos in the list
 def PLChecker():
-    global p, songtitles, PL_link
+    global songtitles 
     PL_link = None
     p = None
     PL_link = ytLink.get()
     playlistCheck = None
     
-    #PL_link = PL_link.replace(r"\"", "/")
+    o = open("links.txt", "w", encoding="utf-8")
+    o.write(PL_link + "\n" + outputPath.get())
+    o.close()
     if "list" in PL_link:
         p = Playlist(PL_link)
         playlistCheck =  True
@@ -69,71 +72,112 @@ def PLChecker():
             songtitles.append(vid)
     else:
         songtitles.append(p)
-    print(len(songtitles))
+
+    
     return songtitles
 
 
 
 def showVideos():
-    global checkboxes, finalDL, Videos
-    checkboxes = {}
+    global checkboxes, Videos
+    Videos=Frame(root)
+    Videos.destroy()
+    checkboxes = []
     musictitles = PLChecker()
-    root.geometry(f"800x{root_height}")
+    
+    root.geometry(f"800x{root_height+100}")
     Videos = ttk.Frame(root,height=280, width=240)
-   
-    Videos.grid(column=4, row=1, columnspan=5)
-    Videos.columnconfigure(0, weight=1)
-    Videos.columnconfigure(0, weight=5)
-    r = 0
+    
+    textBox = ScrolledText(Videos, height=10, width=50)
 
+    Videos.columnconfigure(1, weight=1)
+    Videos.columnconfigure(1, weight=1)
+    
     for vids in range (len(musictitles)):
-        print("Current video index is: ", vids)
+        clickedNew = StringVar(value=clicked.get())
         currentVar = IntVar(value=1)
         title = musictitles[vids]
-        print(title)
-        print(title.title)
-        current_box = ttk.Checkbutton(Videos, text=title.title, variable=currentVar)
-        checkboxes[current_box] = title
-        current_box.var = currentVar
-        print("current_box = ttk.Checkbutton(frame, text=", musictitles[vids].title,", variable=",currentVar)
-        current_box.grid(row=r,column=0)
-        r += 1
         
-    finalDL = ttk.Button(Videos, text="Final download", command=outPut).grid(row=r+1)
+        current_box = ttk.Checkbutton(textBox, text=title.title, variable=currentVar)
+        currentExten = OptionMenu(textBox, clickedNew, *options)
+        
+        textBox.window_create(END, window=current_box)
+        textBox.window_create(END, window=currentExten)
+        textBox.insert(END, "\n")
+        
+        current_box.var = currentVar
+        currentExten.var = clickedNew
+        
+        checkboxes.append(current_box)
+        checkboxes.append(currentExten)
+        
+    textBox['state'] = 'disabled'
+    Videos.grid(column=4, row=1, columnspan=5)
+    textBox.grid(row=0, column=1, sticky=N+S+W+E)
+    ttk.Button(Videos, text="Final download", command=outPut).grid(column=1, row=1)
     
 def outPut():
-    global output
-    output = []
-    for box in checkboxes:
-        if box.var.get() == 1:
-            output.append(checkboxes[box])
-    #for widgets in Videos.winfo_children():
-        #widgets.destroy()
+    Output = []
+    songTitleFinal = []
+    for box in range (0, len(checkboxes), 2):
+        if checkboxes[box].var.get() == 1:
+            Output.append(checkboxes[box]["text"])
+            Output.append(checkboxes[box+1].var.get())
+
+    for b in range (len(songtitles)):
+        for i in range (len(Output)):
+            if songtitles[b].title == Output[i] and songtitles[b] not in songTitleFinal:
+                songTitleFinal.append(songtitles[b])
+                songTitleFinal.append(Output[i+1])
+
     Videos.destroy()
+    zeroOut()
     root.geometry(RootSize)
-    threaders()
-     
-
+    root.after_cancel(evnchng)
+    root.after_cancel(anim) 
+    downloadAnim()
+    count = 0
+    animation(count)
+    threaders(songTitleFinal)
+           
+    
 #Threads are where the downloader starts  
-def threaders():
-    global threads, t
-    threads = []
-    i = 0
-    for t in output:
-        t = threading.Thread(target= lambda: Downloader(i))
-        threads.append(t)
-        t.start()
-        i += 1
+q = queue.Queue()
+def threaders(songsTBD):
+    threading.Thread(target=Downloader, args=(q,), daemon=True).start()
+    for t in range(0, len(songsTBD), 2):
+        ex = t + 1
+        q.put([songsTBD[t], songsTBD[ex]])
+    q.put([None])
+    
+    
+    
+    
+        
+    
 
+    
 
 
 def downloadThumbnail(url: str, dest_folder: str, fileName: str):
-    global fullpath, finaltmbn
+    if "/" in fileName:
+        fileName = fileName.replace(r"/", "-")
+    if '"' in fileName:
+        fileName = fileName.replace(r'"', '')
+    if "|" in fileName:
+        fileName = fileName.replace(r"|", "-")
+    if "+" in fileName:
+        fileName = fileName.replace(r"+", "-")
+    if  "?" in fileName:
+        fileName = fileName.replace(r"?", "-")
+    if  "[" in fileName and "]" in fileName:
+        fileName = fileName.replace(r"[", "(")
+        fileName = fileName.replace(r"]", ")")
     fullpath = dest_folder + fileName + ".jpg"
-
+    
     # Use wget download method to download specified image url.
     finaltmbn = urllib.request.urlretrieve(url, fullpath)
-    print(finaltmbn[0])
+    return fullpath, finaltmbn
 
 def thumbnailChanger(video, path):
     audiofile = eyed3.load(video)
@@ -142,90 +186,79 @@ def thumbnailChanger(video, path):
 
     audiofile.tag.images.set(3, open(path, 'rb').read(), 'image/jpeg')
     audiofile.tag.save(version=eyed3.id3.ID3_V2_3)
+    
 
 #The code for the actual video downloader
-def Downloader(i):
+
+def Downloader(q):
     global state
-    zeroOut()
-    root.after_cancel(evnchng)
-    root.after_cancel(anim) 
-    downloadAnim()
-    count = 0
-    animation(count)
-    downloadBtn["state"] = "disabled"
-    folder = outputPath.get()
-    
-    if "list" in PL_link:
+    while True:
+        values = q.get()
+        
+        if values[0] == None:
+            break
+        else:
+            vid = values[0]
+            exten = values[1]
+        downloadBtn["state"] = "disabled"
+        folder = outputPath.get()
         try:
             #Downloads the videos
-            vid = songtitles[i-1]
-            DV = vid.streams.filter(progressive=True).get_highest_resolution().download(output_path=folder, skip_existing  = True)
+            DV = vid.streams.filter(progressive=True).get_highest_resolution().download(output_path="tempSongsFolder/", skip_existing=True)
             base = os.path.splitext(DV)
         
-        #Removes the file if it already exists
         except FileExistsError:
             print("uh oh")
         
-        #Converts video to mp3 if mp3 is selected
+        #Converts video to mp3 if mp3 is selected, adds a thumbnail, and changes the author
         else:
-            if clicked.get() == ".mp3":
+            fullFile = base[0] + exten
+            print(fullFile)
+            if exten == ".mp3":
                 my_clip = mp.VideoFileClip(base[0] + ".mp4") 
-                my_clip.audio.write_audiofile(base[0] + ".mp3")
+                my_clip.audio.write_audiofile(fullFile)
                 my_clip.close()
                 #Creates a thumbnail and adds the authors name
                 os.remove(DV)
                 vidName = vid.title
                 thumbnail = vid.thumbnail_url 
-                f = downloadThumbnail(thumbnail, "thumbnails/", vidName)
-                thumbnailChanger(base[0] + ".mp3", fullpath)
-                os.remove(finaltmbn[0])
-                audiofile = eyed3.load(base[0] + ".mp3")
-                audiofile.tag.artist = vid.author
-                audiofile.tag.save()
-                
-    else: 
+                img_path, finalImg = downloadThumbnail(thumbnail, "thumbnails/", vidName)
+                thumbnailChanger(fullFile, img_path)
+                os.remove(finalImg[0])
+                audiofile = eyed3.load(fullFile)
+                audiofile.tag.artist = vid.author          
         
-        try:
-            DV = p.streams.filter(progressive=True).get_highest_resolution().download(output_path=folder)
-            base = os.path.splitext(DV)
+        vidTitle = vid.title
+        if ":" in vidTitle:
+            vidTitle = vidTitle.replace(r":", "-")
+        if "/" in vidTitle:
+            vidTitle = vidTitle.replace(r"/", "-")
+        if '"' in vidTitle:
+            vidTitle = vidTitle.replace(r'"', '')
+        if "|" in vidTitle:
+            vidTitle = vidTitle.replace(r"|", "-")
+        if "+" in vidTitle:
+            vidTitle = vidTitle.replace(r"+", "-")
+        if  "?" in vidTitle:
+            vidTitle = vidTitle.replace(r"?", "-")
+        if  "[" in vidTitle and "]" in vidTitle:
+            vidTitle = vidTitle.replace(r"[", "(")
+            vidTitle = vidTitle.replace(r"]", ")")
             
-        except FileExistsError:
-            os.remove(DV)
-
-        else:
-            my_clip = mp.VideoFileClip(base[0] + ".mp4") 
-            my_clip.audio.write_audiofile(base[0] + ".mp3")
-            my_clip.close()
+        destinationPath = os.path.join(folder, vidTitle + exten)
         
-            os.remove(DV)
-            vidName = p.title
-            thumbnail = p.thumbnail_url 
-            downloadThumbnail(thumbnail, "thumbnails/", vidName)
-            thumbnailChanger(base[0] + ".mp3", fullpath)
-            os.remove(finaltmbn[0])
-            audiofile = eyed3.load(base[0] + ".mp3")
-            audiofile.tag.artist = p.author
-            audiofile.tag.save() 
-        
-    threadAliveChecker()
-
-
-def threadAliveChecker():
-    global threads
-    t.handled = False
-    if not t.is_alive():
-            t.handled = True
-    threads = [t for t in threads if not t.handled]
-    if len(threads) == 1:
-        finish()
-        threads.clear()
+        shutil.move(fullFile, destinationPath)
+        q.task_done()
+    q.task_done()
+    q.join()
+    finish()
 
 
 root = tk.Tk()
 #Setting the title, background color, and size of the tkinter window and
 root_height = 280
 root_width=520
-RootSize = root.geometry(f"{root_width}x{root_height}")
+RootSize = root.geometry(f"{root_width}x{root_height}") 
 
 root.title("YouTube Video Downloader")
 root.config(background="PaleGreen1")
@@ -240,12 +273,15 @@ heading.grid(row = 0, column = 1, pady=5, columnspan=3)
 link=Label(root, text='Youtube Link')
 link.grid( row=2, column=1, padx=10, pady=10)
 
-
+saves = open
+f = open("Links.txt", "r")
 
 #Variables for youtube and output path
 ytLink = tk.StringVar()
 outputPath = tk.StringVar()
-
+ytLink.set(f.readline())
+outputPath.set(f.readline())
+f.close()
 #Playlist link, Entry
 linkEntry = ttk.Entry(root, textvariable=ytLink, show='')
 linkEntry.grid(row=2,column=2)
@@ -260,7 +296,6 @@ clicked = StringVar()
 clicked.set( ".mp3" )
 drop = OptionMenu(root, clicked, *options)
 drop.grid(row=2, column=3)
-label = Label(root, text='')
 
 #Output Location Entry
 output=Label(root, text="Output to")
@@ -311,14 +346,14 @@ def eventChange():
     global state, idle_action, movement, moveinc
     #Develon Broad states
 
-    
+
     tempState = random.choice(states)
-    print("Temp State: " + tempState)
+    
     while tempState == state: 
         tempState = random.choice(states)
     
     state = tempState
-    print("State: " + state)
+    
     
     idle_action = None
     movement = None
@@ -446,7 +481,7 @@ def move():
             change *= -1
             xinc = -xinc
             timeFlewn  += 1
-            #print(timeFlewn)
+    
             if al < abs(xinc):
                 movement = "move_right"
             
@@ -482,14 +517,15 @@ def downloadAnim():
 
 
 def finish():
+    
     zeroOut()
-    root.after_cancel(evnchng)
     root.after_cancel(anim) 
     finishAnim()
     animation(count)
-    showinfo(title=finish, message="Videos have been sucessfully downloaded")
+    showinfo(title=finish, message="VIideos have been sucessfully downloaded")
     downloadBtn["state"] = "enabled"
     time.sleep(5)
+    zeroOut()
     eventChanger()
 
 def finishAnim():

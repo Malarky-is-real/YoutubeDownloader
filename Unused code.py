@@ -1,6 +1,6 @@
 
 """
-C:\Users\Anthony\AppData\Local\Programs\Python\Python310\Scripts
+C:\Users\tatsm\AppData\Local\Programs\Python\Python310\Scripts
 #Testing
 t = open("downloadedSongs.txt", "r", encoding="utf-8")
 if "(Unreleased) Perfect Cell Vs SSJ Goku" in t.read():
@@ -9,12 +9,32 @@ else:
     print("It doesnt")
 t.close()
 """
-#Functions
-#Defining CreateWidgets() function
-# to create necessary tkinter widgets
-#def widgets():
+
+
+"""
+Stupid way of finding the extension format of the song
+for i in range(1, len(checkboxes), 2):
+    print("i is ", i)
+    ind = i - 1 
+    print("ind is ", ind)
+    if checkboxes[ind].var.get() == 1: 
+        print("List len is ", len(songTitleFinal))
+        songTitleFinal.insert(len(songTitleFinal)+0, checkboxes[i].var.get())
+        print(checkboxes[i].var.get() + " is being inserted in ", len(songTitleFinal)+0)
+"""     
+
+"""
+Test for queue threading 
+def threadQueue(q, vids, ind):
+    q.put(vids)
+    for t in songTitleFinal: 
+        task = q.get()
+        q.task_done()
+        print(f'thread is downloading {vids}')
+"""
+
     
-    
+
 
 
 
@@ -30,7 +50,16 @@ def Browse():
     download_Path.set(download_Directory)
 """
 
-
+"""
+Checked to see if thredas were alive
+    if f.is_alive() == False:
+        print(f"thread {threads[thread]} is dead")
+    print(f" thread {threads[thread]} is alive?: {f.is_alive()}")
+"""
+#print(f" Is Q empty? {q.empty()}")
+#print(f" thread {threads[thread]} is alive?: {f.is_alive()}")
+#time.sleep(15)
+#print(f" Is Q empty? {q.empty()}")
 
 #Makes a list of all the songs in the music folder.
 """
@@ -64,6 +93,9 @@ def checker():
     print("Files have been added to downloadedSongs.txt\n")
 """
 
+#Changes \ to / to make files work in the downloader. 
+#PL_link = PL_link.replace(r"\"", "/")
+
 """
     for url in urls:
     
@@ -88,6 +120,18 @@ def checker():
     elif titles[i] not in r: 
         print( titles[i] + " not downloaded \n")
 """
+
+"""
+checked to see if threads were still working
+def threadAliveChecker(threadnum):
+    global threads
+    threads[threadnum-2].should_abort_immediately = True
+    if len(threads) <= 1:
+        threads.clear()
+        finish()
+"""     
+
+
 
 """
 Was supposed to show the selected exstension file from the drop down menu
