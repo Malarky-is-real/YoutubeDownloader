@@ -18,6 +18,7 @@ import moviepy.editor as mp
 from PIL import Image
 
 #URLlib import
+#URLlib import
 import urllib.request
 import urllib
 
@@ -418,6 +419,7 @@ def downloadThumbnail(url: str, dest_folder: str, fileName: str):
     #Wget used to download specified image url,  returns both the file path and downloaded file. 
     finaltmbn = urllib.request.urlretrieve(url, fullpath)
     return fullpath, finaltmbn
+    return fullpath, finaltmbn
 
 #Used to changed the thumbnail of the song
 def thumbnailChanger(video, path):
@@ -468,16 +470,23 @@ def Downloader(q):
             continue
         
         #Converts video to mp3 if mp3 is selected, adds a thumbnail, and changes the author
+        #Converts video to mp3 if mp3 is selected, adds a thumbnail, and changes the author
         else:
             fullFile = base[0] + exten
             if exten == ".mp3":
                 my_clip = mp.VideoFileClip(base[0] + ".mp4") 
+                my_clip.audio.write_audiofile(fullFile)
                 my_clip.audio.write_audiofile(fullFile)
                 my_clip.close()
                 #Creates a thumbnail and adds the authors name
                 os.remove(DV)
                 vidName = getTitle(extract.video_id(vid.watch_url))
                 thumbnail = vid.thumbnail_url 
+                img_path, finalImg = downloadThumbnail(thumbnail, "thumbnails/", vidName)
+                thumbnailChanger(fullFile, img_path)
+                os.remove(finalImg[0])
+                audiofile = eyed3.load(fullFile)
+                audiofile.tag.artist = vid.author          
                 img_path, finalImg = downloadThumbnail(thumbnail, "thumbnails/", vidName)
                 thumbnailChanger(fullFile, img_path)
                 os.remove(finalImg[0])
