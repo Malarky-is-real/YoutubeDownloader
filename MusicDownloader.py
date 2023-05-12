@@ -1,17 +1,15 @@
 #This program will get songs from a youtube playlist and then download them to a music folder.
 
 #Import Threading 
-from asyncio import threads
-from sre_parse import State
-import threading
+import queue, threading
 
 #Import Tkinter
 import tkinter as tk
-
 from tkinter.ttk import *
 from tkinter import  *
-from tkinter import DISABLED, Widget, ttk, Grid,filedialog
-from tkinter.messagebox import showinfo
+from tkinter import DISABLED, Widget, ttk, filedialog
+from tkinter.messagebox import *
+from tkinter.scrolledtext import ScrolledText
 
 #ffmpeg
 import moviepy.editor as mp
@@ -19,7 +17,7 @@ import moviepy.editor as mp
 #PIL
 from PIL import Image
 
-import wget
+#URLlib import
 import urllib.request
 import urllib
 
@@ -29,15 +27,17 @@ import time
 #Importing Pytube
 from pytube import YouTube, Playlist
 from pytube import * 
+from pytube import extract
+import pytube.request
 
-#Importing eye3d
+#Importing eye3
 import eyed3
-from eyed3.id3.frames import ImageFrame
 
 #Importing OS
 import os
-from os import link, listdir
-from os.path import isfile, join
+from os import link 
+import shutil
+import requests
 
 #Importing Random
 import random
@@ -46,95 +46,380 @@ import random
 from mttkinter import mtTkinter as tk
 from mttkinter import *
 
+#Modules
+from Spot import *  
+
+#importing Json
+import json
+
+
+from bs4 import BeautifulSoup as bs # importing BeautifulSoup
+
+from YouTubeApi import *
+
+#Functions at the top non functions at the very bottom
+
+
+
+# init an HTML Session
+
 
 #Gets the urls of all the videos in the list
+def loadData(ran):
+    global songsNames, locationNames, playlistName
+    songsNames = []
+    locationNames = []
+    playlistName = []
+    with open('TextFiles/Links.json', 'r') as json_file:
+        data = json.load(json_file)
+    
+    songLinks = data['songs'][0]['song']
+    locationPath = data['songs'][0]['outputs']
+    playlistInfo = data['playlistStuff'][0]['playlist']
+    for music in songLinks:
+        try: 
+            if "www.youtube.com/playlist?list" in music or "&list" in music:
+                songsNames.append(Playlist(music, use_oauth=True, allow_oauth_cache=True).title + " - Youtube Playlist")
+            
+            elif "open.spotify.com/playlist" in music:
+                songsNames.append(getPlaylistName(music) + " - Spotify Playlist")
+
+            elif "open.spotify.com/album" in music:
+                songsNames.append(getAlbumName(music) + " - Spotify Album")
+            
+            else:
+                songsNames.append(YouTube(music, use_oauth=True, allow_oauth_cache=True).title + " - " + YouTube(music, use_oauth=True, allow_oauth_cache=True).author)
+        except:
+            continue
+
+    for locations in locationPath:
+        locationNames.append(os.path.basename(locations))
+
+    if ran == 1:
+        linkEntry['values'] = songsNames
+        outputEntry['values'] = locationNames
+        playlistLinkEntry.insert(0, playlistInfo)
+        playlistOutputEntry['values'] = locationNames
+        
+    return songsNames, songLinks, locationNames, locationPath, playlistInfo, playlistName, data
+
+def jsonUpdate(bigvalue,  value, widget = None, list= None, widgetGet = None ): 
+    if bigvalue == "songs":
+        if widget.get() not in list:
+            list.append(widget.get())
+            data[bigvalue][0][value] = list
+            music = json.dumps(data, indent = 4)
+            with open('TextFiles/Links.json', 'w') as outfile:
+                outfile.write(music)
+    else: 
+        data[bigvalue][0][value] = widgetGet
+        music = json.dumps(data, indent = 4)
+        with open('TextFiles/Links.json', 'w') as outfile:
+            outfile.write(music)
+    loadData(1)
+
+def showLinks():    
+    def deleteLinksSelected (event):
+        def delete(event):
+            nameLinkShower.delete(currItem)
+            nameLinkShower.selection_clear()
+             
+        main.bind('<BackSpace>', delete)
+        currItem = nameLinkShower.selection()[0] 
+    def finishUp(event):
+        songLinks = []
+        locationPath = []
+        
+        for line in nameLinkShower.get_children():
+            for value in range(len(nameLinkShower.item(line)['values']) - 1):
+                nameLinkShower.item(line)['values'][value + 1]
+                if 'https://www.youtube.com' in nameLinkShower.item(line)['values'][value + 1] or 'https://open.spotify.com' in nameLinkShower.item(line)['values'][value + 1] or "https://youtu.be" in nameLinkShower.item(line)['values'][value + 1]: 
+                    songsNames.append(nameLinkShower.item(line)['values'][value])
+                    songLinks.append(nameLinkShower.item(line)['values'][value  + 1])
+
+                else:
+                    locationNames.append(nameLinkShower.item(line)['values'][value])
+                    locationPath.append(nameLinkShower.item(line)['values'][value  + 1])
+                    
+        main.unbind('<Return>')
+        main.unbind('<BackSpace>')
+        nameLinkShower.unbind('<<TreeviewSelect>>')
+        nameLinkShower.destroy()
+        main.geometry(f"{Main_width}x{Main_height}") 
+        noteBook.config(width=Main_width, height=Main_height)
+        root.config(width=Main_width, height=Main_height)
+        data['songs'][0]['song'] = songLinks
+        data['songs'][0]['outputs'] = locationPath
+        music = json.dumps(data, indent = 4)
+
+        with open('TextFiles/Links.json', 'w') as outfile:
+            outfile.write(music)
+        MainMenu.entryconfigure(1, state=ACTIVE)
+        loadData(1)
+    
+    MainMenu.entryconfigure(1, state=DISABLED)
+    main.geometry(f"950x{Main_height+120}")
+    root.config(width=Main_width, height=Main_height+120)
+    noteBook.config(width=850, height=Main_height+120)
+    
+    shownElements = []
+    columns = ("Name", "Link/Location")
+    nameLinkShower = ttk.Treeview(root, columns=columns, show='headings')
+    nameLinkShower.heading('Name', text="Song/Location Names")
+    nameLinkShower.heading('Link/Location', text="Links/Full Location")
+    
+    
+    for songName in range(len(songsNames)):
+        shownElements.append((f'{songsNames[songName]}', f'{songLinks[songName]}'))
+
+    for locs in range(len(locationNames)):
+            shownElements.append((f'{locationNames[locs]}', f'{locationPath[locs]}'))
+    
+    for info in shownElements:
+        nameLinkShower.insert('', tk.END, values=info)
+    
+    main.bind('<Return>', finishUp)    
+    nameLinkShower.bind('<<TreeviewSelect>>', deleteLinksSelected)
+    nameLinkShower.grid(column=4, row=1, columnspan=5, sticky=N+S+W+E)
+
+
+#Lets you browse for the folder you want to put the songs in. 
+def browse(frame):
+    #Sets download location
+    downloadDirectory = filedialog.askdirectory(initialdir="Your Directory Path", title="Save Songs to")
+    
+    #Displays directory in text field
+    if frame == root:
+        outputPath.set(downloadDirectory)
+    elif frame == root2:
+        playlistOutputEntry.set(downloadDirectory)
+
 def PLChecker():
-    global p, songtitles, PL_link
+    global songUrl, outputLocation, p, PL_link, showVids
+    
     PL_link = None
     p = None
-    PL_link = ytLink.get()
-    playlistCheck = None
-    
-    #PL_link = PL_link.replace(r"\"", "/")
-    if "list" in PL_link:
-        p = Playlist(PL_link)
-        playlistCheck =  True
-    else:
-        p = YouTube(PL_link)
-        playlistCheck =  False
+    songUrl = []
 
-    songtitles = []
-    if playlistCheck == True:
-        for vid in p.videos:
-            songtitles.append(vid)
-    else:
-        songtitles.append(p)
-    print(len(songtitles))
-    return songtitles
-
-
-
-def showVideos():
-    global checkboxes, finalDL, Videos
-    checkboxes = {}
-    musictitles = PLChecker()
-    root.geometry(f"800x{root_height}")
-    Videos = ttk.Frame(root,height=280, width=240)
-   
-    Videos.grid(column=4, row=1, columnspan=5)
-    Videos.columnconfigure(0, weight=1)
-    Videos.columnconfigure(0, weight=5)
-    r = 0
-
-    for vids in range (len(musictitles)):
-        print("Current video index is: ", vids)
-        currentVar = IntVar(value=1)
-        title = musictitles[vids]
-        print(title)
-        print(title.title)
-        current_box = ttk.Checkbutton(Videos, text=title.title, variable=currentVar)
-        checkboxes[current_box] = title
-        current_box.var = currentVar
-        print("current_box = ttk.Checkbutton(frame, text=", musictitles[vids].title,", variable=",currentVar)
-        current_box.grid(row=r,column=0)
-        r += 1
+    if linkEntry.get() == "" or outputEntry.get() == "":
+        showwarning(title = "Empty", message="Do not leave the textboxes empty!" )
+        return 
+    if linkEntry.get() in songsNames or linkEntry.get() in songLinks: 
+        PL_link = songLinks[linkEntry.current()]
         
-    finalDL = ttk.Button(Videos, text="Final download", command=outPut).grid(row=r+1)
+        
+    else:
+        PL_link = linkEntry.get()
+        jsonUpdate('songs', 'song', linkEntry, songLinks,widgetGet=PL_link )
     
-def outPut():
-    global output
-    output = []
-    for box in checkboxes:
-        if box.var.get() == 1:
-            output.append(checkboxes[box])
-    #for widgets in Videos.winfo_children():
-        #widgets.destroy()
-    Videos.destroy()
-    root.geometry(RootSize)
-    threaders()
-     
+    
+    #Puts the video/playlist link as well as folder link in a links.txt for auto input. 
+    if outputEntry.get() in locationNames:
+        outputLocation = locationPath[outputEntry.current()]
+        
+    else:
+        outputLocation = outputEntry.get()
+        jsonUpdate('songs', 'outputs', outputEntry, locationPath, widgetGet=outputLocation)
+        
 
-#Threads are where the downloader starts  
-def threaders():
-    global threads, t
-    threads = []
-    i = 0
-    for t in output:
-        t = threading.Thread(target= lambda: Downloader(i))
-        threads.append(t)
-        t.start()
-        i += 1
+    #checks what site the link is from and uses the proper methods to prepare for downloading.
+    if "spotify" in PL_link:
+        songUrl = spotiPlaylistDownload(PL_link)
+    
+    elif "list" in PL_link:
+        p = Playlist(PL_link)
+        titleOrig = p.title
+        for vid in range(len(p.videos)):
+            link = p.video_urls[vid]
+            vidUrl = YouTube(link, use_oauth=True, allow_oauth_cache=True)
+            songUrl.append(vidUrl)
+
+    elif "youtu" in PL_link:
+        p = YouTube(PL_link, use_oauth=True, allow_oauth_cache=True)
+        titleOrig = getTitle(extract.video_id(p.watch_url))
+        songUrl.append(p)
+    if showVideos.alreadyExist == False:
+        showVids = showVideos(songUrl) 
+          
+    if showVideos.alreadyExist == True:
+        
+        addtoList = askyesnocancel("Crossroads", f"Would you like to add {titleOrig} to your songsTBD? \n cancel to replace the current selection with the new one")
+        if addtoList == True:
+            showVids.addon(songUrl)
+            return 
+        elif addtoList == False:
+            return     
+        else:
+            showVids = showVideos(songUrl)   
+    
+    showVids.mainShow()
+    
+#Shows the videos in a box to the right
+class showVideos(object):
+    def __init__(self, mT = []):
+        self.musictitles = mT
+
+       
+    
+    def mainShow(self):
+        global checkboxes, Videos, musicBoxes
+        
+        
+        if showVideos.alreadyExist == True:
+            Videos.destroy()
+
+        Videos=Frame(main)
+        showVideos.alreadyExist = True
+        
+        checkboxes = []
+        musicBoxes = []
+        
+        #set up variables for the videos box. 
+        main.geometry(f"1000x{Main_height}")
+        Videos = ttk.Frame(main,height=280, width=240)
+        textBox = ScrolledText(Videos, height=10, width=50)
+        Videos.columnconfigure(1, weight=1)
+        Videos.columnconfigure(1, weight=1)
+        
+        #Puts the video(s) into a box for display and lets you choose which ones to download, what type of file it'll be, and gives the option to change the video link
+        nums = len(self.musictitles)
+        for vids in range (nums):
+            clickedNew = StringVar(value=clicked.get())
+            currentVar = IntVar(value=1)
+            
+            tempTitle = getTitle(extract.video_id(self.musictitles[vids].watch_url))
+            if len(tempTitle) > 41:
+                title = f'{tempTitle[0:38]}...'
+            else:
+                title = tempTitle
+                
+            current_box = ttk.Checkbutton(textBox, text=title, variable=currentVar)
+            currentExten = OptionMenu(textBox, clickedNew, *options)
+            vidLinkButton = ttk.Button(textBox, text=vids+1, command= lambda: self.changeLink(vids, self.musictitles))
+            
+            textBox.window_create(END, window=current_box)
+            textBox.window_create(END, window=currentExten)
+            textBox.window_create(END, window=vidLinkButton)
+            textBox.insert(END, "\n")
+            
+            current_box.var = currentVar
+            currentExten.var = clickedNew
+            
+            musicBoxes.append(current_box)
+            checkboxes.append(currentExten)
+            
+        textBox['state'] = 'disabled'
+        Videos.grid(column=4, row=0, columnspan=5)
+
+        textBox.grid(row=0, column=1, sticky=N+S+W+E)
+        ttk.Button(Videos, text="Final download", command=self.outPut).grid(column=1, row=1)
+    
+    #Adds new songs to the songs to be dowloaded. 
+    def addon(self, newSongs):
+        self.musictitles += newSongs
+        self.mainShow()
+    
+    #Changes the link of the selected video 
+    def changeLink(self, ind, musictitles):
+        vidTitle = ""
+        
+        vidTitle = musictitles[ind].watch_url
+        
+        linkLabel = Label(main, text="Video link " + str(ind+1))
+        linkChange = tk.Entry(main, textvariable=vidTitle)
+        linkChange.insert(0, vidTitle)
+        linkChangeButton = Button(main, text="Link Change", command = lambda: update(linkChange.get(), ind, musictitles))
+        linkLabel.grid(column=4, row=2)
+        linkChange.grid(column=5, row=2)
+        linkChangeButton.grid(column=6, row=2)
+        main.geometry(f"950x{Main_height+100}")
+
+  
+        def update(link, ind, musictitles):
+            Videos.destroy()
+            musictitles[ind] = YouTube(link, use_oauth=True, allow_oauth_cache=True)
+            linkLabel.grid_forget()
+            linkChange.grid_forget()
+            linkChangeButton.grid_forget()
+            showVideos(musictitles).mainShow()
+            main.geometry(f"950x{Main_height}")
+    
+
+    #Makes the changes final and prepares for download
+    def outPut(self):
+        songTitleFinal = []
+        songExten = []
+        #Puts all the videos that are checked into a list.
+
+        for box in range (len(musicBoxes)):
+            if musicBoxes[box].var.get() == 1:
+                songTitleFinal.append(self.musictitles[box])
+        
+        for bo in range (len(checkboxes)):
+            if musicBoxes[bo].var.get() == 1:
+                songExten.append(checkboxes[bo].var.get())
+            
+        
+        #Removes video box  
+        Videos.destroy()
+        showVideos.alreadyExist = False
+        main.geometry(f'{Main_width}x{Main_height}')
+        noteBook.config(width = Main_width, height = Main_height)
+        root.config(width = Main_width, height = Main_height)
+        
+        #Changes animation to download one, Starts animation, Starts last preperations before download begins
+        downloadAnim(songTitleFinal, songExten)
+    
+    
 
 
+    
+    
+#Adds the selected videos to output so that they can be downloaded. Destroys video box and changes the animation. 
 
+#Starts the actual downloading, Starts queue and inputs all the files that need to be downloaded to the actual downloader function. 
+def threaders(songsTBD, songsExt):
+    global errsSongs 
+    q = queue.Queue()
+    errsSongs = []
+    threading.Thread(target=Downloader, args=(q,), daemon=True).start()
+    for t in range(0, len(songsTBD)):
+        q.put([songsTBD[t], songsExt[t-1]])
+    #Used to stop the downloader once all the songs have been downloaded
+    q.put([None])
+
+def fileFix(file):
+    if "/" in file:
+        file = file.replace(r"/", "-")
+    if '"' in file:
+        file = file.replace(r'"', '')
+    if "|" in file:
+        file = file.replace(r"|", "-")
+    if "+" in file:
+        file = file.replace(r"+", "-")
+    if  "?" in file:
+        file = file.replace(r"?", "-")
+    if  "[" in file and "]" in file:
+        file = file.replace(r"[", "(")
+        file = file.replace(r"]", ")")
+    if  "*" in file:
+        file = file.replace(r"*", "-")
+    if  ":" in file:
+        file = file.replace(r":", "-")
+    return file
+        
+
+#downloads the thumbnail for the videos
 def downloadThumbnail(url: str, dest_folder: str, fileName: str):
-    global fullpath, finaltmbn
+    #Ensures that the file doesn't cause an error due to characters in its name. Combines destination folder with the file name and adds the extension
+    fileName = fileFix(fileName)
     fullpath = dest_folder + fileName + ".jpg"
-
-    # Use wget download method to download specified image url.
+    
+    #Wget used to download specified image url,  returns both the file path and downloaded file. 
     finaltmbn = urllib.request.urlretrieve(url, fullpath)
-    print(finaltmbn[0])
+    return fullpath, finaltmbn
 
+#Used to changed the thumbnail of the song
 def thumbnailChanger(video, path):
     audiofile = eyed3.load(video)
     if (audiofile.tag == None):
@@ -143,374 +428,464 @@ def thumbnailChanger(video, path):
     audiofile.tag.images.set(3, open(path, 'rb').read(), 'image/jpeg')
     audiofile.tag.save(version=eyed3.id3.ID3_V2_3)
 
-#The code for the actual video downloader
-def Downloader(i):
-    global state
-    zeroOut()
-    root.after_cancel(evnchng)
-    root.after_cancel(anim) 
-    downloadAnim()
-    count = 0
-    animation(count)
-    downloadBtn["state"] = "disabled"
-    folder = outputPath.get()
-    
-    if "list" in PL_link:
-        try:
-            #Downloads the videos
-            vid = songtitles[i-1]
-            DV = vid.streams.filter(progressive=True).get_highest_resolution().download(output_path=folder, skip_existing  = True)
-            base = os.path.splitext(DV)
-        
-        #Removes the file if it already exists
-        except FileExistsError:
-            print("uh oh")
-        
-        #Converts video to mp3 if mp3 is selected
+def progress_callback(stream, chunk, bytes_remaining):
+    size = stream.filesize
+    progress = int(((size - bytes_remaining) / size) * 100)
+    if progressbar['value'] < 100:
+        progressbar['value'] = progress
+    elif progressbar['value'] == 100: 
+        Link.config(text = "Downloading")
+    loadingPercent.config(text =str(progress) + "%")
+
+#The code for the actual video downloader. While true it will keep downloading songs, one at time so very slow. 
+def Downloader(q):
+    #Gets the percentage of the file that has been downloaded.
+    while True:
+        progressbar['value'] = 0
+        loadingPercent.config(text="0%")
+        values = q.get()
+
+        #Stops the downloader once all the files have been downloaded or inputs the files and extensions to be downloaded. 
+        if values[0] == None:
+            break
+
         else:
-            if clicked.get() == ".mp3":
+            vid = values[0]
+            exten = values[1]
+            currentlyDownloading['text'] = getTitle(extract.video_id(vid.watch_url))
+
+        downloadBtn["state"] = "disabled"
+        folder = outputLocation
+        
+        try:
+            #Downloads the video(s) and puts them in a temporary file so that they can be changed correctly
+            vid.register_on_progress_callback(progress_callback)
+            DV = vid.streams.filter(progressive=True).get_highest_resolution().download(output_path="tempSongsFolder/", skip_existing=True)           
+            base = os.path.splitext(DV)
+               
+        except:
+            errsSongs.append(vid.watch_url)
+            continue
+        
+        #Converts video to mp3 if mp3 is selected, adds a thumbnail, and changes the author
+        else:
+            fullFile = base[0] + exten
+            if exten == ".mp3":
                 my_clip = mp.VideoFileClip(base[0] + ".mp4") 
-                my_clip.audio.write_audiofile(base[0] + ".mp3")
+                my_clip.audio.write_audiofile(fullFile)
                 my_clip.close()
                 #Creates a thumbnail and adds the authors name
                 os.remove(DV)
-                vidName = vid.title
+                vidName = getTitle(extract.video_id(vid.watch_url))
                 thumbnail = vid.thumbnail_url 
-                f = downloadThumbnail(thumbnail, "thumbnails/", vidName)
-                thumbnailChanger(base[0] + ".mp3", fullpath)
-                os.remove(finaltmbn[0])
-                audiofile = eyed3.load(base[0] + ".mp3")
-                audiofile.tag.artist = vid.author
-                audiofile.tag.save()
-                
-    else: 
+                img_path, finalImg = downloadThumbnail(thumbnail, "thumbnails/", vidName)
+                thumbnailChanger(fullFile, img_path)
+                os.remove(finalImg[0])
+                audiofile = eyed3.load(fullFile)
+                audiofile.tag.artist = vid.author          
         
-        try:
-            DV = p.streams.filter(progressive=True).get_highest_resolution().download(output_path=folder)
-            base = os.path.splitext(DV)
+        #changes the title so that it can be moved to the user selected folder.  
+        vidTitle = getTitle(extract.video_id(vid.watch_url))
+        vidTitle = fileFix(vidTitle)
+        
+        #WIP, trying to allow file upload to servers. So far impossible. 
+        if "http://" in folder:
+            destinationPath = os.path.join('tempSongsFolder/', vidTitle + exten)
+            files = {'file': open('destinationPath', 'rb')}
+            test_response = requests.post(folder, files=files)
+
+            if test_response.ok:
+                print("Upload completed successfully!")
+                print(test_response.text)
+            else:
+                print("Something went wrong!")
+        
+        #Updates file name to stop errors from occuring when moving the file then moves the file. 
+        else:           
             
-        except FileExistsError:
-            os.remove(DV)
+            destinationPath = os.path.join(folder, vidTitle + exten)
+            shutil.move(fullFile, destinationPath)
 
+        #Moves onto the next song or stops entirely.
+        q.task_done()
+    
+    #Moves onto the finishing animation and stops the downloading. 
+    finish()
+    q.join()
+
+
+#Animation Functions
+def eventChange(action = None):
+    #Develon Broad states
+    state = random.choice(states)
+    moveinc = 0
+    cng = 1
+
+    #Checks if the state is 'moving' and then chooses a direction for the moving state
+    if state == "moving":
+        tempAction = random.choice(moving_state)
+        
+        #idle States
+        if tempAction == action: 
+            
+            cng = 0
+        
         else:
-            my_clip = mp.VideoFileClip(base[0] + ".mp4") 
-            my_clip.audio.write_audiofile(base[0] + ".mp3")
-            my_clip.close()
+            action = tempAction
+            
         
-            os.remove(DV)
-            vidName = p.title
-            thumbnail = p.thumbnail_url 
-            downloadThumbnail(thumbnail, "thumbnails/", vidName)
-            thumbnailChanger(base[0] + ".mp3", fullpath)
-            os.remove(finaltmbn[0])
-            audiofile = eyed3.load(base[0] + ".mp3")
-            audiofile.tag.artist = p.author
-            audiofile.tag.save() 
+        #If specific state is left then put move inc to move develon left, opposite for move right
+        if action == "move_left":
+            moveinc = -1
+            
+            if cng == 0:
+                return action, moveinc
         
-    threadAliveChecker()
+        else:
+            moveinc = 1
+            
+            if cng == 0:
+                return action, moveinc
+        
+    #if not moving then choose between different idling states
+    else: 
+        tempAction = random.choice(idle_state)
+        moveinc = 0
+        if tempAction == action:
+            
+            return action, moveinc
+            
+        else: 
+            action = tempAction
+            
+    
+    fileconfigs(action, cng)
+    return action, moveinc
+
+def fileconfigs(action, changeCheck):
+    #File specific checker
+    if changeCheck == 1:
+        if action == "move_right":
+            file = moving_file[0]
+            
+        elif action == "move_left":
+            file = moving_file[1]
+
+        elif action == "sleep":
+            file = idle_file[0]
+        
+        elif action == "idle":
+            file = idle_file[1]
+    imageFileConfig(file, action)
+    
+
+def imageFileConfig(file, action, sf = 0):
+    global develon, imgs
+    if imageFileConfig.alreadyRun == True:
+        root.after_cancel(anim)  
+        
+    
+    info = Image.open(file)
+    frames = info.n_frames
+    imgs = [tk.PhotoImage(file=file, format=f'gif -index {i}') for i in range(frames)]
+    myImage = tk.PhotoImage(file=file)
+    action = action
+    
+    if imageFileConfig.alreadyRun == False:
+        develon = canvas.create_image(startPosX-64,startPosY, image=myImage)
+        imageFileConfig.alreadyRun = True
+    else:
+        try: 
+            canvas.itemconfigure(develon, image=myImage)
+        except:
+            develon = canvas.create_image(startPosX-64,startPosY, image=myImage)
+            canvas.itemconfigure(develon, image=myImage)
+    
+        
+    animation(imgs, frames, cnt = 0, action = action)
+    
+def animation(imgs, frames = 0, cnt=0, action = None):
+    global anim
+    im2 = imgs[cnt]
+    cnt += 1
+    if action == "sleep" and cnt == frames:
+        action = "sleep2"
+        next_gif("sleep2")
+    else:        
+        if cnt == frames:
+            cnt = 0
+    canvas.itemconfig(develon, image=im2)
+    anim = root.after(100, lambda: animation(imgs, frames, cnt, action))
 
 
-def threadAliveChecker():
-    global threads
-    t.handled = False
-    if not t.is_alive():
-            t.handled = True
-    threads = [t for t in threads if not t.handled]
-    if len(threads) == 1:
-        finish()
-        threads.clear()
+def next_gif(action):
+    file = "images/Err.gif"
+    
+    if action == "move_left":
+        file = moving_file[1]
+        imageFileConfig(file, action = None)
+        canvas.move(develon, -10, 0)
+
+    elif action == "move_right":
+        file = moving_file[0]
+        imageFileConfig(file, action = None)
+        canvas.move(develon, 10, 0)
 
 
-root = tk.Tk()
-#Setting the title, background color, and size of the tkinter window and
-root_height = 280
-root_width=520
-RootSize = root.geometry(f"{root_width}x{root_height}")
+    elif action == "sleep":
+        file = 'images/DevelonSleeping.gif'
+        imageFileConfig(file, action = None)
+        
+        
+    elif action == "sleep2":
+        file = 'images/DevelonSleepingIdle.gif'   
+        imageFileConfig(file, action = None)
+                 
+    imageFileConfig(file, action = None)
 
-root.title("YouTube Video Downloader")
-root.config(background="PaleGreen1")
+def move(moveIncrem):
+    xinc = moveIncrem
+    change = 0
+    flyingtime = random.randint(10,30)
+    timeFlewn = 0
+    
+    while timeFlewn != flyingtime:
+        develonpos = canvas.coords(develon)
+        timeFlewn += 1
+        canvas.move(develon, xinc, 0)
+        root.update()
+        time.sleep(0.01)
+        al = develonpos[0]
+        if al < abs(xinc) or al > canvas_width - abs(xinc):
+            change *= -1
+            xinc = -xinc
+            timeFlewn  += 1
+            if al < abs(xinc):
+                direction = "move_right"
+            
+            elif canvas_width - abs(xinc):
+                direction = "move_left"
+            next_gif(direction)
 
 
-#Header for the page
-heading=Label(root, text = "Youtube Video Downloader", padx=15, 
-              pady=15, font="10")
-heading.grid(row = 0, column = 1, pady=5, columnspan=3)
+def eventStarter(action = None):
+    global DevAnim
+    act, direct = eventChange(action)
+    move(direct)
+    DevAnim = root.after(2000, lambda: eventStarter(action = act))
+    
+def downloadAnim(STF, STE):
+    global showVids
+    #root.after_cancel(DevAnim)
+    noteBook.config(height=Main_height, width=Main_width-190)
+    #file = downloading_files[0]
+    #imageFileConfig(file, action = None)
+    #move(0)
+    Link.configure(text="Loading")
+    currentlyDownloading.grid(row=0, column=2, sticky= S)
+    loadingPercent.grid(row=1, column=2, sticky=N, pady=10)
+    progressbar.grid(row=1, column=2, sticky=N, pady=35)
+    threaders(STF, STE)
 
-#Link Entry label
-link=Label(root, text='Youtube Link')
-link.grid( row=2, column=1, padx=10, pady=10)
+def finish(): 
+    if len(errsSongs) > 0:
+        String = ""
+        for i in range(len(errsSongs)):
+            String += f"{getTitle(extract.video_id(errsSongs[i]))} \n"
+        download2 = askyesno("Downloading Error", message=String)
+
+        if download2:
+            for i in range(len(errsSongs)):
+                mak = YouTube(errsSongs[i], use_oauth=True, allow_oauth_cache=True)
+                mak.streams.filter(progressive=True).get_highest_resolution().download(output_path=outputLocation, skip_existing=True)
+    
+    noteBook.config(height=Main_height, width=Main_width)
+    showinfo(title=finish, message="Videos have been sucessfully downloaded")
+    downloadBtn["state"] = "enabled"
+    currentlyDownloading.grid_forget()
+    progressbar.grid_forget()
+    loadingPercent.grid_forget()
+    Link.configure(text="Youtube Link")
+    time.sleep(5)
+    
 
 
+#---------------------------------Root 2 functions------------------------------------------------------ 
+def getSongsTBD():
+    global outputLocation, songUrl, showVids
+    playlistTBD = playlistInfo
+    outputLocation = playlistOutputEntry.get()
+
+    if playlistLinkEntry.get() == "" or playlistOutputEntry.get() == "":
+        showwarning(title = "Empty", message="Do not keep the textboxes empty!" )
+        return 
+    if "https://open.spotify.com/playlist" not in playlistLinkEntry.get():
+        showwarning(title = "Wrong Link", message="Only put spotify playlists on this page!" )
+        return 
+    
+    if outputLocation in locationNames:
+        outputLocation = locationPath[outputEntry.current()]
+        
+    else:
+        outputLocation = playlistOutputEntry.get()
+        jsonUpdate('songs', 'outputs', playlistOutputEntry, locationPath, widgetGet=outputLocation)
+        
+
+    
+    if playlistTBD != playlistInfo:
+        warning  = askquestion(root2, message="Are you sure you want to make " + getPlaylistName(playlistTBD) + " your playlist to be upkept" )
+        if warning == "yes":
+            jsonUpdate('playlistStuff', 'playlist', widgetGet=playlistTBD)
+        
+    songUrl = spotiPlaylist(playlistTBD)
+    if showVideos.alreadyExist == False:
+        showVids = showVideos(songUrl) 
+          
+    if showVideos.alreadyExist == True:
+        
+        addtoList = askyesnocancel("Crossroads", f"Would you like to add {getPlaylistName(playlistTBD) } to your songsTBD? \n cancel to replace the current selection with the new one")
+        if addtoList == True:
+            showVids.addon(songUrl)
+            return 
+        elif addtoList == False:
+            return     
+        else:
+            showVids = showVideos(songUrl)   
+    showVids.mainShow()
+
+#Window set up for the downloader, changes size, gives the window a name, changes color. 
+main = tk.Tk()
+Main_height = 350
+Main_width=520
+MainSize = main.geometry(f"{Main_width}x{Main_height}") 
+main.title("YouTube Video Downloader")
+main.config(background="grey")
+s = ttk.Style()
+s.theme_use('default')
+
+noteBook = ttk.Notebook(main, height=Main_height, width=Main_width)
+noteBook.grid(column=0, columnspan=2, row=0, rowspan=2)
+
+root = Frame(noteBook, background="grey", height=Main_height, width=Main_width)
+noteBook.add(root, text="Main Downloader")
+
+root2 = Frame(noteBook, background="grey", height=Main_height, width=Main_width)
+noteBook.add(root2, text="Spotify Upkeep")
+
+songsNames, songLinks,  locationNames, locationPath, playlistInfo, playlistName, data = loadData(0)
+
+
+
+#Top name of the downloader. 
+heading=Label(root, text = "Song Downloader", justify=CENTER, padx=14, pady=15, font="15", width = 19)
+heading.grid(row = 0, column = 2, pady=5)
+
+#Entry for video/playlist link 
+Link=Label(root, text='Youtube Link')
+Link.grid(row=2, column=1, padx=10, pady=10)
+
+#Menu stuffs
+menuBar = Menu(main)
+main.config(menu=menuBar)
+
+MainMenu = Menu(menuBar)
+menuBar.add_cascade(label="File", menu=MainMenu)
+MainMenu.add_command(label='Saved Links', command=showLinks)
 
 #Variables for youtube and output path
 ytLink = tk.StringVar()
 outputPath = tk.StringVar()
 
-#Playlist link, Entry
-linkEntry = ttk.Entry(root, textvariable=ytLink, show='')
+#Entry for the video/playlist link  
+linkEntry = ttk.Combobox(root, textvariable=ytLink, show='', values=songsNames)
 linkEntry.grid(row=2,column=2)
 linkEntry.focus()
 
-
-
-#File exstension chooser
+#The file extension options 
 options = [".mp3", ".mp4"]
 clicked = StringVar()
 
+#Sets the default value to .mp3 and creates the actual drop down menu
 clicked.set( ".mp3" )
 drop = OptionMenu(root, clicked, *options)
 drop.grid(row=2, column=3)
-label = Label(root, text='')
 
-#Output Location Entry
-output=Label(root, text="Output to")
+#Output location Entry, it's default value is set to whatever was input last time similar to the video link entry. 
+output=Label(root, text="Output Location")
 output.grid(row=3, column=1, padx=10, pady=10)
-outputEntry = ttk.Entry(root, textvariable=outputPath)
+outputEntry = ttk.Combobox(root, textvariable=outputPath, values=locationNames)
 outputEntry.grid(row=3, column=2)
 
-def browse():
-    #Sets download location
-    downloadDirectory = filedialog.askdirectory(
-        initialdir="Your Directory Path", title="Save Songs to")
-    
-    #Displays directory in text field
-    outputPath.set(downloadDirectory)
-
 #Browse Button
-browser = ttk.Button(root, text="Browse", command=browse)
+browser = ttk.Button(root, text="Browse", command=lambda: browse(root))
 browser.grid(row=3, column=3)
 
 #Download Button
-downloadBtn = ttk.Button(root, text="Download", command=showVideos)
+downloadBtn = ttk.Button(root, text="Download", command=PLChecker)
+downloadBtn.grid(row=4, column=2)
+
+#Download bar and loading percent 
+currentlyDownloading = tk.Label(main, text="...", font=("Agency FB", 13))
+progressbar = ttk.Progressbar(main, orient="horizontal", length=160, mode='determinate', maximum=100)
+loadingPercent = tk.Label(main, text="0%", font=("Agency FB", 10))
+
+#Other non gui related variables
+pytube.request.default_range_size = 1048576 
+
+
+#All under this are for Develon
+#Develon window Set up
+startPosX=166 
+startPosY=52
+canvas_width = 200
+canvas_height = 100
+canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, bg="lightblue")
+canvas.grid(row=1, column=2)
+myImage = tk.PhotoImage(file="images/DevelonDownloaderNew.png")
+canvas.create_image(startPosX-64,startPosY, image=myImage)
+showVideos.alreadyExist = False
+#imageFileConfig.alreadyRun = False
+
+#Root 2 ----------------------------------------
+heading2=Label(root2, text = "Spotify Upkeeper", padx=14, pady=15, font="15", width = 19)
+heading2.grid(row = 0, column = 2, pady=5 )
+    
+playlistEntryLink = tk.StringVar()
+playlistoutputPath = tk.StringVar()
+
+playlistCanvas = tk.Canvas(root2, width=canvas_width, height=canvas_height, bg="lightblue")
+playlistCanvas.grid(row=1, column=2)
+
+playlistLinkLabel=Label(root2, text='Playlist Link')
+playlistLinkLabel.grid(row=2, column=1, padx=10, pady=10)
+
+playlistOutputLabel=Label(root2, text='Output Location')
+playlistOutputLabel.grid(row=3, column=1, padx=10, pady=10)
+
+playlistLinkEntry = Entry(root2, textvariable=playlistEntryLink)
+playlistLinkEntry.grid(row=2,column=2)
+playlistLinkEntry.insert(0, playlistInfo)
+
+playlistOutputEntry = Combobox(root2, textvariable=playlistoutputPath, values=locationNames)
+playlistOutputEntry.grid(row=3, column=2)
+
+browser2 = ttk.Button(root2, text="Browse", command=lambda: browse(root2))
+browser2.grid(row=3, column=3)
+downloadBtn = ttk.Button(root2, text="Download", command=lambda: getSongsTBD())
 downloadBtn.grid(row=4, column=2)
 
 
-def zeroOut():
-    global state, idle_action, movement, moveinc, count, moveinc, file, fileUsed, info, frames
-    moveinc = 0
-    file = None
-    fileUsed = None
-    info = None
-    frames = None
-    idle_action = None
-    movement = None
-    count = 0
-
-zeroOut()
-state = None
+#Sets up all the different animation files for develon
 states = ["moving", "not_moving"]
 moving_state = ["move_left", "move_right"]
 idle_state = ["sleep", "idle"]
 moving_file = ['images/DevelonFlyingFlipped.gif', 'images/DevelonFlying.gif']
 idle_file = ['images/DevelonSleeping.gif', 'images/DevelonFlyingFlipped.gif', 'images/DevelonSleepingIdle.gif']
 downloading_files = ["images/DownloadingDevelon.gif",'images/DevelonComplete.gif']
-tempState = None
-
-
-def eventChange():
-    global state, idle_action, movement, moveinc
-    #Develon Broad states
-
-    
-    tempState = random.choice(states)
-    print("Temp State: " + tempState)
-    while tempState == state: 
-        tempState = random.choice(states)
-    
-    state = tempState
-    print("State: " + state)
-    
-    idle_action = None
-    movement = None
-    
-    #Checks if state is movement and then chooese a specific state from moving state
-    if state == "moving":
-        tempState2 = random.choice(moving_state)
-        
-        while tempState2 == state: 
-            tempState2 = random.choice(moving_state)
-        movement = tempState2
-        
-        #If specific state is left then put move inc to move develon left, opposite for move right
-        if movement == "move_left":
-            moveinc = -1
-
-        else:
-            moveinc = 1
-        
-    #if not moving then chooese between specific idling states
-    else: 
-        tempState3 = random.choice(idle_state)
-        while tempState3 == idle_action:
-            tempState3 = random.choice(idle_state)
-        idle_action = tempState3
-        moveinc = 0
-
-
-def animation(count):
-    global anim, file, fileUsed, idle_action
-    im2 = imgs[count]
-    count += 1
-    if idle_action == "sleep" and count == frames:
-        idle_action = "sleep2"
-        next_gif()
-    else:        
-        if count == frames:
-            count = 0
-    
-    canvas.itemconfig(develon, image=im2)
-    anim = root.after(100, lambda: animation(count))
-
-
-def fileconfigs():
-    #Globalization
-    global file, fileUsed, state, idle_action, count
-    #File specific checker
-    if state == "moving":
-        if movement == "move_right":
-            fileUsed = 0
-            file = moving_file[fileUsed]
-            count = 0
-
-        elif movement == "move_left":
-            fileUsed = 1
-            file = moving_file[fileUsed]
-            count = 0
-
-    elif state != "moving":
-        if idle_action == "sleep":
-            fileUsed = 0
-            file = idle_file[fileUsed]
-        
-        elif idle_action == "idle":
-            fileUsed = 1
-            file = idle_file[fileUsed]
-
-
-def imageFileConfig():
-    global frames, info, imgs
-    info = Image.open(file)
-    frames = info.n_frames
-    imgs = [PhotoImage(file=file, format=f"gif -index {i}") for i in range(frames)]
-    myImage = PhotoImage(file=file)
-    canvas.itemconfigure(develon, image=myImage)
-
-def createcanv():
-    global frames, info, imgs, develon
-    info = Image.open(file)
-    frames = info.n_frames
-    imgs = [tk.PhotoImage(file=file, format=f'gif -index {i}') for i in range(frames)]
-    myImage = tk.PhotoImage(file=file)
-    develon = canvas.create_image(startPosX-64,startPosY, image=myImage)
-
-def next_gif():
-    global imgs, fileUsed, file, count
-    if state == "moving": 
-        if movement == "move_left":
-            count = 0
-            fileUsed = 1
-            file = moving_file[fileUsed]
-            canvas.move(develon, -10, 0)
-
-        elif movement == "move_right":
-            count = 0
-            fileUsed = 0
-            file = moving_file[fileUsed]
-            canvas.move(develon, 10, 0)
-
-    elif state == "not_moving":
-        if idle_action == "sleep":
-            file = 'images/DevelonSleeping.gif'
-            
-        elif idle_action == "sleep2":
-            file = 'images/DevelonSleepingIdle.gif'            
-    imageFileConfig()
-
-def move():
-    global movement 
-    xinc = 0
-    xinc = moveinc
-    change = 0
-    flyingtime = random.randint(1,30)
-    timeFlewn = 0
-    
-    while state == "moving" and timeFlewn != flyingtime:
-        develonpos = canvas.coords(develon)
-        timeFlewn += 1
-        canvas.move(develon, xinc, 0)
-        root.update()
-        time.sleep(0.01)
-        
-        al = develonpos[0]
-        if al < abs(xinc) or al > canvas_width - abs(xinc):
-            change *= -1
-            xinc = -xinc
-            timeFlewn  += 1
-            #print(timeFlewn)
-            if al < abs(xinc):
-                movement = "move_right"
-            
-            elif canvas_width - abs(xinc):
-                movement = "move_left"
-            next_gif()
-
-def eventStarter():
-    eventChange()
-    fileconfigs()
-    createcanv()
-    animation(count)
-    move()
-
-def eventChanger(): 
-    global evnchng
-    eventChange()
-    fileconfigs()
-    next_gif()
-    count = 0
-    root.after_cancel(anim)
-    animation(count)
-    move()
-    evnchng = root.after(2000, lambda: eventChanger())
-
-def downloadAnim():
-    global count, file, fileUsed
-    count = 0
-    file = downloading_files
-    fileUsed = 0
-    file = file[fileUsed]
-    imageFileConfig()
-
-
-def finish():
-    zeroOut()
-    root.after_cancel(evnchng)
-    root.after_cancel(anim) 
-    finishAnim()
-    animation(count)
-    showinfo(title=finish, message="Videos have been sucessfully downloaded")
-    downloadBtn["state"] = "enabled"
-    time.sleep(5)
-    eventChanger()
-
-def finishAnim():
-    global count, file, fileUsed
-    count = 0
-    file = downloading_files
-    fileUsed = 1
-    file = file[fileUsed]
-    imageFileConfig()
-    
-
-canvas_width = 200
-canvas_height = 100
-canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, bg="lightblue")
-canvas.grid(row=1, column=2)
-
-startPosX=100
-startPosY=50
-
+err_Files = ["images/Err.gif"]
+imageFileConfig.alreadyRun = False
 #Calling functions
-eventStarter()
-eventChanger()
+eventStarter(action = None)
 
-root.mainloop()
+#Starts gui window
+main.mainloop()

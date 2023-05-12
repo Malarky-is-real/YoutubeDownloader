@@ -1,0 +1,23 @@
+{
+    "songs": [
+        {
+            "song": [
+                "https://www.youtube.com/playlist?list=PLPECdi5vt-fzoanbT7-QyTh6x_pHDUYOh",
+                "https://open.spotify.com/playlist/5ln8XN0mv5aufkiH4OZ3hq?si=0913deeb5d624c94",
+                "https://www.youtube.com/watch?v=pAaXzHJhA18",
+                "https://youtu.be/fkvZOvOeON0",
+                "https://youtu.be/7AVBN5_UT_E",
+                "https://youtu.be/sw-WKtehLD4"
+            ],
+            "outputs": [
+                "C:/Users/tatsm/Music/SongsFromSpoti",
+                "C:/Users/tatsm/Music/test"
+            ]
+        }
+    ],
+    "playlistStuff": [
+        {
+            "playlist": "https://open.spotify.com/playlist/5ln8XN0mv5aufkiH4OZ3hq?si=0bfa300af67e4830"
+        }
+    ]
+}
