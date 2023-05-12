@@ -160,7 +160,7 @@ def showLinks():
     MainMenu.entryconfigure(1, state=DISABLED)
     main.geometry(f"950x{Main_height+120}")
     root.config(width=Main_width, height=Main_height+120)
-    noteBook.config(width=850, height=Main_height+120)
+    noteBook.config(width=9, height=Main_height+120)
     
     shownElements = []
     columns = ("Name", "Link/Location")
