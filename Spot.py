@@ -66,7 +66,7 @@ def spotiPlaylistDownload(plId):
             artist_uri = results[i]['track']['artists'][0]['name']
             
             try:
-                s = Search(f'{artist_uri} - {currSong} +audio')
+                s = Search(f'{artist_uri} - {currSong} +audio -video')
                 SongLinks.append(s.results[0])
                 
                 
@@ -89,7 +89,7 @@ def spotiPlaylistDownload(plId):
             artist_uri = results[num]['artists'][0]['name']
             try:
 
-                s = Search(f'{currSong} - {albumName} - {artist_uri} +audio')
+                s = Search(f'{currSong} - {albumName} - {artist_uri} +audio -video')
                 SongLinks.append(s.results[0])
                 
             except:
@@ -145,7 +145,7 @@ def spotiPlaylist(plID):
 
         try:
             
-            s = Search(f"{i} +audio")
+            s = Search(f"{i} +audio -video")
             SongLinks.append(s.results[0])
 
         except:

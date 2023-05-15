@@ -66,6 +66,7 @@ from YouTubeApi import *
 
 
 #Gets the urls of all the videos in the list
+
 def loadData(ran):
     global songsNames, locationNames, playlistName
     songsNames = []
@@ -80,9 +81,9 @@ def loadData(ran):
     for music in songLinks:
         try: 
             if "www.youtube.com/playlist?list" in music or "&list" in music:
-                songsNames.append(Playlist(music, use_oauth=True, allow_oauth_cache=True).title + " - Youtube Playlist")
+                songsNames.append(Playlist(music).title + " - Youtube Playlist")
             
-            elif "open.spotify.com/playlist" in music:
+            elif "https://open.spotify.com/playlist" in music:
                 songsNames.append(getPlaylistName(music) + " - Spotify Playlist")
 
             elif "open.spotify.com/album" in music:
@@ -91,17 +92,30 @@ def loadData(ran):
             else:
                 songsNames.append(YouTube(music, use_oauth=True, allow_oauth_cache=True).title + " - " + YouTube(music, use_oauth=True, allow_oauth_cache=True).author)
         except:
+            if "www.youtube.com/playlist?list" in music or "&list" in music:
+                songsNames.append("Youtube Playlist")
+            
+            elif "https://open.spotify.com/playlist" in music:
+                songsNames.append("Spotify Playlist")
+
+            elif "open.spotify.com/album" in music:
+                songsNames.append("Spotify Album")
+            
+            else:
+                songsNames.append("Youtube Video")
+            songsNames.append("err")
             continue
 
     for locations in locationPath:
         locationNames.append(os.path.basename(locations))
+    
 
     if ran == 1:
         linkEntry['values'] = songsNames
         outputEntry['values'] = locationNames
         playlistLinkEntry.insert(0, playlistInfo)
         playlistOutputEntry['values'] = locationNames
-        
+    
     return songsNames, songLinks, locationNames, locationPath, playlistInfo, playlistName, data
 
 def jsonUpdate(bigvalue,  value, widget = None, list= None, widgetGet = None ): 
@@ -160,8 +174,8 @@ def showLinks():
     
     MainMenu.entryconfigure(1, state=DISABLED)
     main.geometry(f"950x{Main_height+120}")
-    root.config(width=Main_width, height=Main_height+120)
-    noteBook.config(width=9, height=Main_height+120)
+    root.config(width=950, height=Main_height+120)
+    noteBook.config(width=950, height=Main_height+120)
     
     shownElements = []
     columns = ("Name", "Link/Location")
@@ -418,7 +432,6 @@ def downloadThumbnail(url: str, dest_folder: str, fileName: str):
     
     #Wget used to download specified image url,  returns both the file path and downloaded file. 
     finaltmbn = urllib.request.urlretrieve(url, fullpath)
-    return fullpath, finaltmbn
     return fullpath, finaltmbn
 
 #Used to changed the thumbnail of the song
@@ -685,11 +698,12 @@ def eventStarter(action = None):
     
 def downloadAnim(STF, STE):
     global showVids
-    #root.after_cancel(DevAnim)
-    noteBook.config(height=Main_height, width=Main_width-190)
-    #file = downloading_files[0]
-    #imageFileConfig(file, action = None)
-    #move(0)
+    move(0)
+    root.after_cancel(DevAnim)
+    root.after_cancel(anim)
+    file = downloading_files[0]
+    imageFileConfig(file, action = None)
+    noteBook.config(height=Main_height, width=Main_width-190)    
     Link.configure(text="Loading")
     currentlyDownloading.grid(row=0, column=2, sticky= S)
     loadingPercent.grid(row=1, column=2, sticky=N, pady=10)
@@ -707,7 +721,9 @@ def finish():
             for i in range(len(errsSongs)):
                 mak = YouTube(errsSongs[i], use_oauth=True, allow_oauth_cache=True)
                 mak.streams.filter(progressive=True).get_highest_resolution().download(output_path=outputLocation, skip_existing=True)
-    
+    root.after_cancel(anim)
+    file = downloading_files[1]
+    imageFileConfig(file, action = None)
     noteBook.config(height=Main_height, width=Main_width)
     showinfo(title=finish, message="Videos have been sucessfully downloaded")
     downloadBtn["state"] = "enabled"
@@ -781,9 +797,9 @@ noteBook.add(root, text="Main Downloader")
 root2 = Frame(noteBook, background="grey", height=Main_height, width=Main_width)
 noteBook.add(root2, text="Spotify Upkeep")
 
-songsNames, songLinks,  locationNames, locationPath, playlistInfo, playlistName, data = loadData(0)
-
-
+songsNames, songLinks, locationNames, locationPath, playlistInfo, playlistName, data = loadData(0)
+print(songsNames)
+print(songLinks)
 
 #Top name of the downloader. 
 heading=Label(root, text = "Song Downloader", justify=CENTER, padx=14, pady=15, font="15", width = 19)
@@ -850,8 +866,8 @@ canvas_width = 200
 canvas_height = 100
 canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, bg="lightblue")
 canvas.grid(row=1, column=2)
-myImage = tk.PhotoImage(file="images/DevelonDownloaderNew.png")
-canvas.create_image(startPosX-64,startPosY, image=myImage)
+#myImage = tk.PhotoImage(file="images/DevelonDownloaderNew.png")
+#canvas.create_image(startPosX-64,startPosY, image=myImage)
 showVideos.alreadyExist = False
 #imageFileConfig.alreadyRun = False
 
