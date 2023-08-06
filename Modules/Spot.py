@@ -1,6 +1,6 @@
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-from spotipy.oauth2 import SpotifyClientCredentials
+import spotipy.util as util
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 from pytube import YouTube, Playlist
 from pytube import * 
 
@@ -8,66 +8,27 @@ from pytube import *
 cid = 'e2ba3be9797249cdae236e95cafa46aa'
 secret = '07949281789c4445851d5eb1b3b495cd'
 client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secret=secret)
-sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+
 
 scope = "user-library-read"
+auth_manager = spotipy.oauth2.SpotifyClientCredentials(
+    client_id=cid,
+    client_secret=secret
+)
+token = auth_manager.get_access_token()
+sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
+#Gets the playlist name
 def getPlaylistName(plID):
     playList = sp.playlist(playlist_id=plID, fields="name")
     return playList["name"]
 
+#Gets the album name
 def getAlbumName(plID):
     playList = sp.album(plID)
     return playList["name"]
 
-
-def spotiPlaylistDownload(plId):
-    if "playlist" in plId:
-        results = sp.playlist_tracks(plId)
-        tracks = results['items']
-
-        while results['next']:
-                results = sp.next(results)
-                tracks.extend(results['items'])
-
-        results = tracks 
-
-        SongLinks = []
-        for i in range(len(results)):
-            currSong = results[i]['name']
-            artist_uri = results[i]['artists'][0]['name']
-            
-            try:
-                s = Search(f'{artist_uri} - {currSong}')
-                SongLinks.append(s.results[0])
-                
-            except:
-                print(currSong + " not found, please find manually sorry")
-                
-    elif "album" in plId:
-        results = sp.album_tracks(plId)
-        tracks = results['items']
-        while results['next']:
-            results = sp.next(results)
-            tracks.extend(results['items'])
-
-        results = tracks
-        SongLinks = []
-        albumName = sp.album(plId)['name']
-        for num in range(len(results)):
-            currSong = results[num]['name']
-            artist_uri = results[num]['artists'][0]['name']
-            try:
-
-                s = Search(f'{currSong} - {albumName}')
-                SongLinks.append(s.results[0])
-                
-            except:
-                print(currSong + " not found, please find manually sorry")
-    return SongLinks
-
-
-
+#Gets the name of all the songs in a playlist
 def getAllSongs(plID):
     if "playlist" in plID:
         
@@ -93,6 +54,55 @@ def getAllSongs(plID):
         for num in range(len(results)):
             print(results[num]['name'])
 
+#Downloads all songs in a playlist no matter if they are in savedSongs list
+def spotiPlaylistDownload(plId):
+    if "playlist" in plId:
+        results = sp.playlist_tracks(plId)
+        tracks = results['items']
+
+        while results['next']:
+                results = sp.next(results)
+                tracks.extend(results['items'])
+
+        results = tracks 
+        
+        SongLinks = []
+        for i in range(len(results)):
+            currSong = results[i]['track']['name']
+            artist_uri = results[i]['track']['artists'][0]['name']
+            
+            try:
+                s = Search(f'{artist_uri} - {currSong} +audio ')
+                SongLinks.append(s.results[0])
+                
+                
+            except:
+                print(currSong + " not found, please find manually sorry")
+                
+    elif "album" in plId:
+        results = sp.album_tracks(plId)
+        tracks = results['items']
+        while results['next']:
+            results = sp.next(results)
+            tracks.extend(results['items'])
+
+        results = tracks
+        SongLinks = []
+        albumName = sp.album(plId)['name']
+        authorName = sp.album(plId)['name']
+        for num in range(len(results)):
+            currSong = results[num]['name']
+            artist_uri = results[num]['artists'][0]['name']
+            try:
+
+                s = Search(f'{currSong} - {albumName} - {artist_uri} +audio ')
+                SongLinks.append(s.results[0])
+                
+            except:
+                print(currSong + " not found, please find manually sorry")
+    return SongLinks
+
+#Downloads songs not in savedSongs list
 def spotiPlaylist(plID):
 
     results = sp.playlist_tracks(plID)
@@ -140,16 +150,11 @@ def spotiPlaylist(plID):
     for i in toDownload:
 
         try:
-            s = Search(i)
-            SongLinks.append(s.results[0])
+            
+            s = Search(f"{i} +audio ")
+            
+            SongLinks.append(YouTube(s.results[0].watch_url, use_oauth=True, allow_oauth_cache=True ))
 
         except:
             print(i + " not found, please find manually sorry")
     return SongLinks
-
-
-
-    
-
-        
-    

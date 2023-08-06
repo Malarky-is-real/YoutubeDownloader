@@ -152,7 +152,42 @@ def checker():
     showinfo(title="Disclaimer", message=msg)
 """
 
+"""
+Old Downloading Code
+    while True:
+        progressbar['value'] = 0
+        loadingPercent.config(text="0%")
+        values = q.get()
 
+        #Stops the downloader once all the files have been downloaded or inputs the files and extensions to be downloaded. 
+        if values[0] == None:
+            break
+
+        else:
+            vid = values[0]
+            exten = values[1]
+            currentlyDownloading['text'] = getTitle(extract.video_id(vid.watch_url))
+
+        downloadBtn["state"] = "disabled"
+        folder = outputLocation
+        
+        try:
+            #Downloads the video(s) and puts them in a temporary file so that they can be changed correctly
+            vid.register_on_progress_callback(progress_callback)
+            
+            #DV = vid.streams.filter(progressive=True).get_highest_resolution().download(output_path="tempSongsFolder/", skip_existing=True)           
+            #base = os.path.splitext(DV)
+               
+        except:
+            errsSongs.append(vid.watch_url)
+            continue
+        
+        #Converts video to mp3 if mp3 is selected, adds a thumbnail, and changes the author
+        else:
+            fullFile = base[0] + exten
+            if exten == ".mp3":
+                fileConverter(vid, fullFile, DV, base)
+"""
 
 """
 All animation stuffs
