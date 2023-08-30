@@ -2,6 +2,7 @@ from PIL import Image
 import tkinter as tk
 import random
 import time
+from threading import Event
 
 #Sets up all the different animation files for develon
 states = ["moving", "not_moving"]
@@ -19,6 +20,7 @@ class petAnimations(object):
         self.pet = ""
         self.file = ""
         self.action = ""
+        self.DevAnim = ""
         self.anim = ""
         self.startPosX=166 
         self.startPosY=52
@@ -27,9 +29,6 @@ class petAnimations(object):
         self.IFCalreadyRan = False
     
     def eventVerify(self, newEvent):
-        mak = self.action
-        print("Original", mak)
-        print("new " + newEvent)
         if newEvent == "move_left" and self.action == "move_right": 
             print("turn_left")
             self.action = newEvent
@@ -160,8 +159,12 @@ class petAnimations(object):
                 self.pet = self.canvas.create_image(self.startPosX-64,self.startPosY, image=myImage)
                 self.canvas.itemconfigure(self.pet, image=myImage)
         
-        self.IFCalreadyRan = True    
-        self.animation(imgs, frames, cnt = 0, action = action)
+        self.IFCalreadyRan = True   
+        if action == "finish":
+            return imgs, frames, action     
+        else:
+            self.animation(imgs, frames, cnt = 0, action = action)
+        
         
     def animation(self, imgs, frames = 0, cnt=0, action = None):
         
@@ -242,15 +245,17 @@ class petAnimations(object):
             
    
     
-    def downloadAnim(self, STF):
-        self.root.after_cancel(self.DevAnim)
+    def downloadAnim(self):
+        if self.DevAnim != "":
+            self.root.after_cancel(self.DevAnim)
         file = downloading_files[0]
         self.imageFileConfig(file, action = None)
         self.move(0)
 
     def finish(self): 
-        self.imageFileConfig(downloading_files[1], action=None)
-        time.sleep(5)
-        self.root.after_cancel(self.anim) 
-        self.eventStarter()
+        imgs, frames, action = self.imageFileConfig(downloading_files[1], action="finish")
+        self.animation(imgs, frames, cnt = 0, action = action)
+        
+        #self.root.after_cancel(self.anim) 
+        #self.eventStarter()
 

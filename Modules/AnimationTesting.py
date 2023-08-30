@@ -65,10 +65,15 @@ for i in range(len(actions)):
         
     elif i < 2:
         button = tk.Button(buttonFrame, text=actions[i], command=lambda k = i: develon.eventVerify(actions[k])).grid(row=i, column=0, sticky="E")
+    
 
 
 
 buttonStart = tk.Button(buttonFrame, text="Event Start", command=lambda: develon.eventStarter(action = None)).grid(row=0, column=1)
 buttonStop = tk.Button(buttonFrame, text="Event Stop", command=lambda: develon.eventStopper()).grid(row=1, column=1)
+button = tk.Button(buttonFrame, text="Err_Animat", command=lambda: develon.next_gif("ERR", False)).grid(row=2, column=0, sticky="E")
+button = tk.Button(buttonFrame, text="Down_Finish", command=lambda: develon.finish()).grid(row=2, column=2, sticky="E")
+button = tk.Button(buttonFrame, text="Download", command=lambda: develon.downloadAnim()).grid(row=2, column=1)
+
 buttonFrame.grid(column=2, row=2, columnspan=2, rowspan=2)
 root.mainloop()
