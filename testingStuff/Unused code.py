@@ -190,6 +190,66 @@ Old Downloading Code
 """
 
 """
-All animation stuffs
+    Original Code for trying to get a boss battle to work, pre Pygame
+        Main = tk.Tk()
+        
+        
+        MainFrame = tk.Frame(Main).grid(column=0, row=0)
+        BossCanvas = tk.Canvas(MainFrame, background="grey")
+        
+        img= PhotoImage(file="images/DragonPlaceHolder.png")
+        img = img.subsample(2,2)
+        Player = BossCanvas.create_image(100, 130, image=img)
+        
+        #p = BossCanvas.coords(Player)
+        
+        #collisions = BossCanvas.find_overlapping(p[0], p[1], 0, 0)
+        #collisions = list(collisions)
+        #collisions.remove(Player)
+        
+        
+        
 
+        
+        img2= PhotoImage(file="images/BossPlaceHolder.png")
+        img2 = img2.subsample(2,2)
+        Boss = BossCanvas.create_image(200, 130, image=img2)
+
+        
+        #Bindings
+        Main.bind('w', lambda event: move("w"))
+        Main.bind('a', lambda event: move("a"))
+        Main.bind('s', lambda event: move("s"))
+        Main.bind('d', lambda event: move("d"))
+        P = BossCanvas.coords(Player)
+        coll = BossCanvas.find_overlapping(P[0], P[1], 0, 0)
+        coll = list(coll)
+        coll.remove(Player)
+        
+            
+        def collisionDetection():
+
+            if len(coll) != 0:
+                print('hit')
+        
+        def move(key):
+            if key == "w":
+                BossCanvas.move(Player, 0, -10)
+                
+            elif key == "a":
+                BossCanvas.move(Player, -10, 0)
+            
+            elif key == "s": 
+                BossCanvas.move(Player, 0, 10)
+                
+            elif key == "d":
+                BossCanvas.move(Player, 10, 0 )
+            
+            collisionDetection()
+        
+        BossCanvas.grid(column=0, row=0)
+        
+        
+        
+        Main.mainloop()
 """

@@ -133,7 +133,6 @@ def spotiPlaylist(plID):
 
         if f"{currSong} - {artist_uri}" not in data:
             filesong = f"*{currSong} - {artist_uri}"
-
             song = f"{artist_uri} - {currSong}"
             toDownload.append(song)
             data += filesong + "\n"

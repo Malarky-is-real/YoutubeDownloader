@@ -38,7 +38,7 @@ from tkinter.ttk import *
 from tkinter import  *
 from tkinter import DISABLED, Widget, ttk, filedialog
 from tkinter.messagebox import *
-from tkinter.scrolledtext import ScrolledText
+from tkinter.scrolledtext import S5crolledText
 import moviepy.editor as mp
 from PIL import Image
 import urllib.request
@@ -50,17 +50,17 @@ from pytube import *
 from pytube import extract
 import pytube.request
 import eyed3
-import os
+import osa
 from os import link 
 import shutil
 import requests
 import random
-from mttkinter import mtTkinter as tk
-from mttkinter import *
+from mttkinter import mtTkinter as tkwd
+from mttkinter import *dwd
 #from Spot import *  
 import json
 from bs4 import BeautifulSoup as bs # importing BeautifulSoup
-from selenium import webdriver
+from selenium import webdrivwerww
 from selenium.webdriver.common.by import By
 import requests
 import base64
