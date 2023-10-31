@@ -3,7 +3,7 @@ import spotipy.util as util
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 from pytube import YouTube, Playlist
 from pytube import * 
-
+import csv
 
 cid = 'e2ba3be9797249cdae236e95cafa46aa'
 secret = '07949281789c4445851d5eb1b3b495cd'
@@ -54,7 +54,7 @@ def getAllSongs(plID):
         for num in range(len(results)):
             print(results[num]['name'])
 
-#Downloads all songs in a playlist no matter if they are in savedSongs list
+#Downloads all songs in a playlist/album no matter if they are in savedSongs list
 def spotiPlaylistDownload(plId):
     if "playlist" in plId:
         results = sp.playlist_tracks(plId)
@@ -157,3 +157,26 @@ def spotiPlaylist(plID):
         except:
             print(i + " not found, please find manually sorry")
     return SongLinks
+
+
+def getEverything(plID):
+    if "playlist" in plID:
+        
+        results = sp.playlist_items(plID)
+        tracks = results['items']
+
+        while results['next']:
+                results = sp.next(results)
+                tracks.extend(results['items'])
+        
+        with open ('testingStuff/mak.csv', 'w', newline='', encoding="utf-8") as file:
+            writer = csv.writer(file)
+            field = ["title", "author", "album"]
+            writer.writerow(field)
+
+            results = tracks
+            for num in range(len(results)):
+                writer.writerow([results[num]['track']['name'], results[num]['track']['artists'][0]['name'], results[num]['track']['album']["name"] ])
+
+            
+#getEverything("https://open.spotify.com/playlist/7AlH1EbTWk4zFh8FQfWI17?si=f384b75584564109")

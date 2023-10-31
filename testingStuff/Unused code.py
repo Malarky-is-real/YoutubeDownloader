@@ -1,6 +1,7 @@
 
 """
 C:\Users\tatsm\AppData\Local\Programs\Python\Python310\Scripts
+C:\Users\tatsm\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\LocalCache\local-packages\Python310\Scripts
 #Testing
 t = open("downloadedSongs.txt", "r", encoding="utf-8")
 if "(Unreleased) Perfect Cell Vs SSJ Goku" in t.read():

@@ -1,4 +1,6 @@
-"""from logging import root
+"""
+#### Imported Modules ###
+from logging import root
 from msilib.schema import CheckBox
 from multiprocessing.spawn import import_main_path
 from re import I
@@ -16,7 +18,6 @@ import tkinter as tk
 from tkinter import *
 from tkinter.ttk import *
 from tkinter import DISABLED, Widget, ttk, Grid
-import random as rand
 import time 
 from tkinter.scrolledtext import ScrolledText
 import os
@@ -65,9 +66,17 @@ from selenium.webdriver.common.by import By
 import requests
 import base64
 from datetime import datetime
-import json"""
-#import Modules.download as download
+import json
+import random as rand
+import Modules.download as download
+
 import RandomEventsClass
+
 
 BossTest = RandomEventsClass.RandomEvents()
 BossTest.bossEvent()
+"""
+
+import DataManagement
+dataMaker = DataManagement.dataFile("testingStuff/mak.csv")
+dataMaker.getArtistSongs("Aphex Twin", "#3","Selected Ambient Works Volume II" )

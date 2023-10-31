@@ -7,21 +7,13 @@ import queue, threading
 import tkinter as tk
 from tkinter.ttk import *
 from tkinter import  *
-from tkinter import DISABLED, Widget, ttk, filedialog
+from tkinter import DISABLED, ttk, filedialog
 from tkinter.messagebox import *
 from tkinter.scrolledtext import ScrolledText
-
+import ttkwidgets.frames 
 #ffmpeg
-import moviepy.editor as mp
 
 #PIL
-
-
-#URLlib import
-#URLlib import
-import urllib.request
-import urllib
-
 #Imports time
 import time
 
@@ -29,23 +21,12 @@ import time
 from pytube import YouTube, Playlist
 from pytube import * 
 from pytube import extract
-import pytube.request
 
-#Importing eye3
-import eyed3
-
-#Importing OS
-import os
-from os import link 
-import shutil
-import requests
 
 #Importing Random
 import random
 
-#import MTkinter
-from mttkinter import mtTkinter as tk
-from mttkinter import *
+
 
 #Modules
 from Modules.Spot import * 
@@ -53,11 +34,12 @@ from Modules.Spot import *
 #importing Json
 import json
 
-from bs4 import BeautifulSoup as bs # importing BeautifulSoup
-
 from Modules.YouTubeApi import *
 
 import Modules.download as download
+
+import Modules.animations as DevAnim
+
 
 #Functions at the top non functions at the very bottom
 
@@ -80,7 +62,7 @@ def loadData(ran):
     #Seperates the video links into their respective locations
     for music in songLinks:
         try: 
-            if "www.youtube.com/playlist?list" in music or "&list" in music:
+            if "youtube.com/playlist?list" in music or "&list" in music:
                 songsNames.append(Playlist(music).title + " - Youtube Playlist")
             
             elif "https://open.spotify.com/playlist" in music:
@@ -90,17 +72,18 @@ def loadData(ran):
                 songsNames.append(getAlbumName(music) + " - Spotify Album")
             
             else:
-                
                 songsNames.append(getTitle(extract.video_id(music)) + " - " + YouTube(music, use_oauth=True, allow_oauth_cache=True ).author)
+        
         except:
             if "www.youtube.com/playlist?list" in music or "&list" in music:
                 songsNames.append("Youtube Playlist")
             
-            elif "https://open.spotify.com/playlist" in music:
+            elif "spotify.com/playlist" in music:
                 songsNames.append("Spotify Playlist")
 
             elif "open.spotify.com/album" in music:
                 songsNames.append("Spotify Album")
+                
             else:
                 songsNames.append("Youtube Video")
             continue
@@ -211,8 +194,15 @@ def browse(frame):
     elif frame == root2:
         playlistOutputEntry.set(downloadDirectory)
 
+#------------Root 1 Functions-------------------#
 def PLChecker():
     global songUrl, outputLocation, p, PL_link, showVids
+    if random.randint(1,1021) == 0:
+        DevelonAnim.eventStopper()
+        DevelonAnim.next_gif(None)
+        showwarning(title="RANDOM EVENT", message="A random event is about to occur.")
+        
+        return
     
     PL_link = None
     p = None
@@ -262,9 +252,9 @@ def PLChecker():
           
     elif showVideos.alreadyExist == True:
         
-        addtoList = askyesnocancel("Crossroads", f"Would you like to add {titleOrig} to your songsTBD? \n cancel to replace the current selection with the new one")
+        addtoList = askyesnocancel(title="Add to current queue?", message="Add " + "\u0332".join(titleOrig) + " to your Queue?\nCancel to replace the queue")
         
-        if addtoList == True:
+        if addtoList:
             showVids.addon(songUrl)
             return 
         
@@ -300,7 +290,6 @@ class showVideos(object):
         Videos = ttk.Frame(main,height=280, width=240, )
         textBox = ScrolledText(Videos, height=10, width=50)
         #Videos.columnconfigure(1, weight=1)
-        
         #Puts the video(s) into a box for display and lets you choose which ones to download, what type of file it'll be, and gives the option to change the video link
         nums = len(self.musictitles)
         for vids in range (nums):
@@ -312,8 +301,8 @@ class showVideos(object):
                 title = f'{tempTitle[0:38]}...'
             else:
                 title = tempTitle
-                
             current_box = ttk.Checkbutton(textBox, text=title, variable=currentVar)
+            ttkwidgets.frames.Balloon(current_box, headertext="help", text=tempTitle, timeout=.5)
             currentExten = OptionMenu(textBox, clickedNew, *options)
             vidLinkButton = ttk.Button(textBox, text=vids+1, command= lambda k = vids:  self.changeLink(k, self.musictitles))
             
@@ -329,7 +318,7 @@ class showVideos(object):
             checkboxes.append(currentExten)
             
         textBox['state'] = 'disabled'
-        Videos.grid(column=4, row=0, columnspan=4, padx=25)
+        Videos.grid(column=4, row=0, padx=25)
 
         textBox.grid(row=0, column=1, sticky=N+S+W+E)
         ttk.Button(Videos, text="Final download", command=self.outPut).grid(column=1, row=1)
@@ -344,15 +333,14 @@ class showVideos(object):
         Videos.config(height=1000, width=1000)
         vidTitle = musictitles[ind].watch_url
         linkLabel = Label(Videos, text="Video link " + str(ind+1))
-        linkChange = tk.Entry(Videos, textvariable=vidTitle, width=35)
+        linkChange = tk.Entry(Videos, textvariable=vidTitle, width=30)
         linkChange.delete(0,END)
         linkChange.insert(0, vidTitle)  
         linkChangeButton = Button(Videos, text="Link Change", command = lambda: update(linkChange.get(), ind, musictitles))
         
-        linkLabel.grid(column=4, row=1, padx=25)
-        linkChange.grid(column=5, row=1)
-        
-        linkChangeButton.grid(column=6, row=1, padx=25)
+        linkLabel.grid(column=0, row=2)
+        linkChange.grid(column=1, row=2)
+        linkChangeButton.grid(column=2, row=2)
         
 
   
@@ -403,64 +391,7 @@ def threaders(songsTBD, songsExt):
         q.put([songsTBD[t], songsExt[t-1]])
     #Used to stop the downloader once all the songs have been downloaded
     q.put([None])
-
-def fileFix(file):
-    if "/" in file:
-        file = file.replace(r"/", "-")
-    if '"' in file:
-        file = file.replace(r'"', '')
-    if "|" in file:
-        file = file.replace(r"|", "-")
-    if "+" in file:
-        file = file.replace(r"+", "-")
-    if  "?" in file:
-        file = file.replace(r"?", "-")
-    if  "[" in file and "]" in file:
-        file = file.replace(r"[", "(")
-        file = file.replace(r"]", ")")
-    if  "*" in file:
-        file = file.replace(r"*", "-")
-    if  ":" in file:
-        file = file.replace(r":", "-")
-    if "#" in file:
-        file = file.replace(r"#", "")
-    return file
-        
-
-#downloads the thumbnail for the videos
-def downloadThumbnail(url: str, dest_folder: str, fileName: str):
-    
-    #Ensures that the file doesn't cause an error due to characters in its name. Combines destination folder with the file name and adds the extension
-    fileName = fileFix(fileName)
-    fullpath = dest_folder + fileName + ".jpg"
-    
-    #Wget used to download specified image url,  returns both the file path and downloaded file. 
-    finaltmbn = urllib.request.urlretrieve(url, fullpath)
-    return finaltmbn
-
-#Used to changed the thumbnail of the song
-def thumbnailChanger(video, path):
-    audiofile = eyed3.load(video)
-    if (audiofile.tag == None):
-        audiofile.initTage()
-
-    audiofile.tag.images.set(3, open(path, 'rb').read(), 'image/jpeg')
-    audiofile.tag.save(version=eyed3.id3.ID3_V2_3)
-
-
-    
-
-def fileConverter(vid, fullFile, DV, base):
-    my_clip = mp.VideoFileClip(base[0] + ".mp4") 
-    my_clip.audio.write_audiofile(fullFile)
-    my_clip.close()
-    #Creates a thumbnail and adds the authors name
-    os.remove(DV)
-    vidName = getTitle(extract.video_id(vid.watch_url))
-    thumbnail = vid.thumbnail_url 
-    img_path, finalImg = downloadThumbnail(thumbnail, "thumbnails/", vidName)
-    thumbnailChanger(fullFile, img_path)
-    
+           
 #The code for the actual video downloader. While true it will keep downloading songs, one at time so very slow. 
 def Downloader(q):
     #Gets the percentage of the file that has been downloaded.
@@ -469,7 +400,6 @@ def Downloader(q):
         progressbar['value'] = 0
         loadingPercent.config(text="0%")
         values = q.get()
-
         #Stops the downloader once all the files have been downloaded or inputs the files and extensions to be downloaded. 
         if values[0] == None:
             break
@@ -497,38 +427,32 @@ def Downloader(q):
 
 
 #Animation Functions
-
-
-
-
 def downloadAnim(STF, STE):
     global showVids
-    #move(0)
-    #root.after_cancel(DevAnim)
-    #root.after_cancel(anim)
-    #file = downloading_files[0]
-    #imageFileConfig(file, action = None)
     noteBook.config(height=Main_height, width=Main_width-190)    
     LinkLabel.configure(text="Loading")
     currentlyDownloading.grid(row=0, column=2, sticky= S)
     loadingPercent.grid(row=1, column=2, sticky=N, pady=10)
     progressbar.grid(row=1, column=2, sticky=N, pady=35)
+    DevelonAnim.eventStopper()
+    DevelonAnim.downloadAnim()
     threaders(STF, STE)
 
+
 def finish(): 
+    DevelonAnim.finish()
     if len(errsSongs) > 0:
         String = ""
+        
         for i in range(len(errsSongs)):
             String += f"{getTitle(extract.video_id(errsSongs[i]))} \n"
+        
         download2 = askyesno("Downloading Error", message=String)
-
         if download2:
             for i in range(len(errsSongs)):
-                mak = YouTube(errsSongs[i], use_oauth=True, allow_oauth_cache=True)
-                mak.streams.filter(progressive=True).get_highest_resolution().download(output_path=outputLocation, skip_existing=True)
-    #root.after_cancel(anim)
-    #file = downloading_files[1]
-    #imageFileConfig(file, action = None)
+                brokenSong = YouTube(errsSongs[i], use_oauth=True, allow_oauth_cache=True)
+                brokenSong.streams.filter(progressive=True).get_highest_resolution().download(output_path=outputLocation, skip_existing=True)
+                
     noteBook.config(height=Main_height, width=Main_width)
     showinfo(title=finish, message="Videos have been sucessfully downloaded")
     downloadBtn["state"] = "enabled"
@@ -537,12 +461,14 @@ def finish():
     loadingPercent.grid_forget()
     LinkLabel.configure(text="Youtube Link")
     time.sleep(5)
-    
+    DevelonAnim.eventStarter()
 
-
-#---------------------------------Root 2 functions------------------------------------------------------ 
+#---------------------------------Root 2 functions------------------------------------------------------#
 def getSongsTBD():
     global outputLocation, songUrl, showVids
+    if random.randint(1, 10) == 0:
+        showwarning(title="RANDOM EVENT", message="A random event is about to occur.")
+    
     playlistTBD = playlistInfo
     outputLocation = playlistOutputEntry.get()
 
@@ -619,6 +545,7 @@ main.config(menu=menuBar)
 MainMenu = Menu(menuBar)
 menuBar.add_cascade(label="File", menu=MainMenu)
 MainMenu.add_command(label='Saved Links', command=showLinks)
+MainMenu.add_command(label='Random Events', command=lambda: print("random Events"))
 
 #Variables for youtube and output path
 ytLink = tk.StringVar()
@@ -635,7 +562,7 @@ clicked = StringVar()
 
 #Sets the default value to .mp3 and creates the actual drop down menu
 clicked.set( ".mp3" )
-drop = OptionMenu(root, clicked, *options)
+drop = ttk.OptionMenu(root, clicked, *options)
 drop.grid(row=2, column=3)
 
 #Output location Entry, it's default value is set to whatever was input last time similar to the video link entry. 
@@ -664,10 +591,10 @@ canvas_width = 200
 canvas_height = 100
 canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, bg="lightblue")
 canvas.grid(row=1, column=2)
-#myImage = tk.PhotoImage(file="images/DevelonDownloaderNew.png")
-#canvas.create_image(startPosX-64,startPosY, image=myImage)
+DevelonAnim = DevAnim.petAnimations(main, canvas)
+DevelonAnim.eventStarter(action=None)
 showVideos.alreadyExist = False
-#imageFileConfig.alreadyRun = False
+
 
 #Root 2 ----------------------------------------
 heading2=Label(root2, text = "Spotify Upkeeper", padx=14, pady=15, font="15", width = 19)

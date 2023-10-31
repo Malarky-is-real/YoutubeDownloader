@@ -24,11 +24,11 @@ class RandomEvents(object):
         testSurface = pygame.image.load("images/DevelonDownloaderNew.png").convert()
         testGround = pygame.Surface((800, 200))
         testGround.fill("darkgrey")
-        textSurface = test_font.render("Boss", False,pygame.Color('red'))
+        
         
         testEnemy = pygame.image.load("images/BossPlaceHolder.png").convert_alpha()
         enemyRect = testEnemy.get_rect(midbottom = (400, 300))
-        
+        direction = 10
        
         playerSurface = pygame.image.load("images/DragonPlaceHolder.png").convert_alpha()
         playerRect = playerSurface.get_rect(midbottom = (80,300))
@@ -42,14 +42,23 @@ class RandomEvents(object):
         attack = False
         alive = False
                 
+        directBool = True
+        boss_Attack = False
+        player_Attack = False    
+        moveInt = 5   
+        attackType = ""
         
-        attacker = ""        
-        
-        def charAttack(attacker, attackerRect, alive, attackX, spawn_YCoord):
+        def charAttack(player, attackerRect, alive, attackX, spawn_YCoord, direction, moveInt):
             #Checks if an attack already exists. 
             if not alive:
                 #Gets the location the space button was pressed at
-                attackX = attackerRect.midbottom[0] + 20
+                if direction:
+                    attackX = attackerRect.midbottom[0] + 20
+                    moveInt = 5
+                else: 
+                    attackX = attackerRect.midbottom[0] - 20
+                    moveInt = -5
+                    
                 spawn_YCoord = attackerRect.midbottom[1]
                 alive = True
             
@@ -58,32 +67,41 @@ class RandomEvents(object):
             screen.blit(attackObj, attackRect)
             
             #Moves the attack so long as it is not off the screen or it doesn't hit the boss
-            if attackRect.left < 810 and attackRect.colliderect(enemyRect) == False:
-                attackX += 5
-                attack = True
-                return attack, alive, attackX, spawn_YCoord
+            if attackRect.left < 810 and attackRect.left > -50  and attackRect.colliderect(enemyRect) == False:
+                attackX += moveInt
+                player = True
+                return player, alive, attackX, spawn_YCoord, moveInt
                 
                 
             else: 
-                attack = False
                 alive = False
+                player = False
                 attackRect.left = 80
-                print("del")
-                return attack, alive, 80, 300
+                return player, alive, 80, 300, moveInt
         
-        def bossAttack(playerRect, enemyRect):
-            if playerRect.right > enemyRect.right:
-                playerRect.x -= 2
-                print("sucking left")
+        def bossAttack(playerRect, enemyRect, type, direction):
+            if attackType == "spin":
+                if playerRect.right > enemyRect.right:
+                    playerRect.x -= 2
+                    
+                if playerRect.right < enemyRect.right:
+                    playerRect.x += 2
                 
-            if playerRect.right < enemyRect.right:
-                playerRect.x += 2
-                print("sucking right")
-            
-            if playerRect.top < enemyRect.top:
-                playerRect.y += 2
-                print("sucking down")
-            
+                if playerRect.top < enemyRect.top:
+                    playerRect.y += 2
+                
+                if playerRect.bottom > enemyRect.bottom:
+                    playerRect.y -= 2
+                    
+            if attackType == "dash":    
+                if enemyRect.right == -100 or enemyRect.right == 1000:
+                    direction *= -1
+                    enemyRect.right += (10 * direction)
+                    print("direction = ", direction)
+        
+   
+            return direction
+
 
 
         while running:
@@ -97,47 +115,49 @@ class RandomEvents(object):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         attack = True
-                        attacker = "player"
+                        player_Attack = True
                     
                     if event.key == pygame.K_l:
                         attack = True
-                        attacker = "boss"
-                
+                        boss_Attack = True
+                        attackType = "spin" 
+                    
+                    if event.key == pygame.K_p:
+                        attack = True
+                        boss_Attack = True
+                        attackType = "dash" 
+                        
+            
             #Runs the whole game
             if gameRunning:    
                 
                 screen.fill("blue")
                 screen.blit(testSurface, (0,0))
                 screen.blit(testGround, (0, 300))
-                screen.blit(textSurface, (0, 200))
-                #enemyRect.right -=1
-                #if enemyRect.right < -100:
-                #    enemyRect.left = 900
-
+                #screen.blit(textSurface, (0, 200))
                 screen.blit(testEnemy, enemyRect)
                 screen.blit(playerSurface, playerRect)
 
                 #Creates the players attack
                 if attack:
-                    if attacker == "player":
-                        attack, alive, attackXCoord, attackYCoord = charAttack("player", playerRect, alive, attackXCoord, attackYCoord)
+                    if player_Attack:
+                        player_Attack, alive, attackXCoord, attackYCoord, moveInt = charAttack("player", playerRect, alive, attackXCoord, attackYCoord, directBool, moveInt)
                     
-                    elif attacker == "boss":
-                        bossAttack(playerRect, enemyRect)
+                    if boss_Attack:
+                        direction = bossAttack(playerRect, enemyRect, attackType, direction = direction)
                         
                 
                 if playerRect.colliderect(enemyRect) and invincible != True:
                     playerHealth -= 1
                     print("hit")
                     invincible = True
-                    attack = False
+                    if attackType == "spin": 
+                        boss_Attack = False
 
                 if playerRect.colliderect(enemyRect) == False: 
                     invincible = False
                     
                 
-                #Player 
-                #pygame.draw.circle(screen, "grey", player_pos, 40)
                 
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_w]:
@@ -146,8 +166,10 @@ class RandomEvents(object):
                     playerRect.top += 5
                 if keys[pygame.K_a]:
                     playerRect.left -= 5 
+                    directBool = False
                 if keys[pygame.K_d]:
                     playerRect.left += 5
+                    directBool = True
                 
                 
                 
@@ -162,7 +184,7 @@ class RandomEvents(object):
         
             #Draws all the elements  
             pygame.display.update()
-            dt = clock.tick(60) / 1000
+            clock.tick(60)
             
         pygame.quit()
         

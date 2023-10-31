@@ -18,11 +18,12 @@ songs = Modules.Spot.spotiPlaylist("5ln8XN0mv5aufkiH4OZ3hq")
 for song in songs:
     currentVidDL = Modules.download.downloadVideo(song, ".mp3", False, None, None, None)
     currentVidDL.Downloader()
-    fileName = currentVidDL.getFileName()
+    fileLocation = currentVidDL.fileMove("C:/Users/tatsm/Music/SongsFromSpoti")
     file = drive.CreateFile({'title': Modules.YouTubeApi.getTitle(extract.video_id(song.watch_url)) + ".mp3", 'parents': [{'id': folder['id']}]})
-    file.SetContentFile(fileName)
+    file.SetContentFile(fileLocation)
     file.Upload()
-    #currentVidDL.fileMove("C:/Users/tatsm/Music/SongsFromSpoti")
+    
+
 
 """
 for path  in os.listdir(fileLocation):

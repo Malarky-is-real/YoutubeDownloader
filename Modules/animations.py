@@ -18,7 +18,6 @@ class petAnimations(object):
         self.root  = rootObject
         self.canvas = canv
         self.pet = ""
-        self.file = ""
         self.action = ""
         self.DevAnim = ""
         self.anim = ""
@@ -28,34 +27,40 @@ class petAnimations(object):
         self.canvas_height = 100
         self.IFCalreadyRan = False
     
-    def eventVerify(self, newEvent):
-        if newEvent == "move_left" and self.action == "move_right": 
-            print("turn_left")
-            self.action = newEvent
-            self.switchAnims("switch_left")
+    def override(self):
+        overridingAction = input("Input a new action: ")
+        print(overridingAction)
+        
+
             
-        elif newEvent == "move_right" and self.action == "move_left":
-            print("turn_right")
-            self.action = newEvent
-            self.switchAnims("switch_right")    
-            
-        else:
-            self.action = newEvent
-            self.fileconfigs(action = newEvent, changeCheck = 1)
+
     
     #Starts the animation loop  
     def eventStarter(self, action = None):
-        act, direct = self.eventChange(action)
+        direct = self.eventChange(action)
         self.move(direct)
-        self.DevAnim = self.root.after(2000, lambda: self.eventStarter(action = act))
+        self.DevAnim = self.root.after(2000, lambda: self.eventStarter(action = self.action))
+        
+    def eventPauser(self, direct):
+        self.move(direct)
+        self.DevAnim = self.root.after(2000, lambda: self.eventStarter(action = self.action))
         
     def eventStopper(self):
         self.root.after_cancel(self.DevAnim)
     
+    def switchAnims(self, switchAction): 
+        if switchAction == "switch_right":
+            print("move right")
+            self.imageFileConfig("images/DevelonTurnsRight.gif", "turn_right")
+            
+        if switchAction == "switch_left":
+            self.imageFileConfig("images/DevelonTurnsleft.gif", "turn_left")
+    
     #Changes the animation that the pet is using
     def eventChange(self, action = None):
         #Develon Broad states
-        state = random.choice(states)
+        state = "moving"
+        # state = random.choice(states)
         moveinc = 0
         change = 1
 
@@ -68,55 +73,63 @@ class petAnimations(object):
             
             #Checks if the action was the previous action and if so it stops resetting entirely.
             if tempAction == self.action: 
-                
                 change = 0
             
             #If the tempaction isn't the same as the previous action then you continue with the animation changing. 
             else:
-
-                    
-                self.action = tempAction
+                action = tempAction
                 
-            
+            del tempAction
             #If specific action is left then put move increment to move the pet left, opposite for move right
             if action == "move_left":
                 moveinc = -1
                 
                 if change == 0:
-                    return action, moveinc
+                    return moveinc
             
             else:
                 moveinc = 1
                 
                 if change == 0:
-                    return action, moveinc
+                    return moveinc
             
         #if not moving then choose between different idling states
         else: 
             tempAction = random.choice(idle_state)
             moveinc = 0
-            if tempAction == action:
-                
-                return action, moveinc
+            if tempAction == self.action:
+                del tempAction
+                return moveinc
                 
             else: 
-                self.action = tempAction
-                
+                action = tempAction
+                del tempAction
+        self.fileconfigs(action, True)        
+        return moveinc
+
+    def eventVerify(self, newEvent):
+        print(self.action, " --> ", newEvent)
+        if newEvent == "move_left" and self.action == "move_right": 
+            print("Changing")
+            self.action = newEvent
+            self.eventStopper()
+            self.switchAnims("switch_left")
+            self.eventPauser(-1)
+            
+        elif newEvent == "move_right" and self.action == "move_left":
+            print("Changing")
+            self.action = newEvent
+            self.eventStopper()
+            self.switchAnims("switch_right")
+            self.eventPauser(1)
         
-        self.fileconfigs(self.action, change)
-        return self.action, moveinc
-    
-    def switchAnims(self, switchAction): 
-        if switchAction == "switch_right":
-            print("move right")
-            self.imageFileConfig("images/DevelonTurnsRight.gif", "turn_right")
-        if switchAction == "switch_left":
-            self.imageFileConfig("images/DevelonTurnsleft.gif", "turn_left")
-        
-        
+        else:
+            self.action = newEvent
+            self.fileconfigs(action = newEvent, changeCheck = True)
+ 
     def fileconfigs(self, action, changeCheck):
         #File specific checker:
-        if changeCheck == 1:
+        if changeCheck:
             if action == "move_right":
                 self.action = "move_right"
                 file = moving_file[0]
@@ -132,6 +145,10 @@ class petAnimations(object):
             elif action == "idle":
                 self.action = "idle"
                 file = idle_file[1]
+            
+            elif action == "Err":
+                self.action = "Err"
+                file = err_Files[0]
 
             self.imageFileConfig(file, action)
         
@@ -150,8 +167,7 @@ class petAnimations(object):
             self.pet = self.canvas.create_image(self.startPosX-64,self.startPosY, image=myImage)
             self.IFCalreadyRan = True
         
-        else:
-            
+        else:    
             try: 
                 self.canvas.itemconfigure(self.pet, image=myImage)
             
@@ -169,58 +185,55 @@ class petAnimations(object):
     def animation(self, imgs, frames = 0, cnt=0, action = None):
         
         cnt += 1
+
         if action == "sleep" and cnt >= frames - 1:
             cnt = frames - 1
         
         elif action == "turn_right" and cnt >= frames - 1:
             self.action = "move_right"
-            self.next_gif("move_right", False)
+            self.next_gif("move_right")
             
         
-        elif action == "turn_left" and cnt >= frames - 1:
+        elif action == "turn_left" :
             self.action = "move_left"
-            self.next_gif("move_left", False)
+            self.next_gif("move_left")
             
             
         
         elif cnt == frames:        
             cnt = 0
             
-        
-        im2 = imgs[cnt]
-        self.canvas.itemconfig(self.pet, image=im2)
+        self.canvas.itemconfig(self.pet, image=imgs[cnt])
         self.anim = self.root.after(100, lambda: self.animation(imgs, frames, cnt, action))
 
 
-    def next_gif(self, action, wall):
+    def next_gif(self, nextAction):
         file = "images/Err.gif"
         
-        if action == "move_left":
+        if nextAction == "move_left":
             file = moving_file[1]
             self.imageFileConfig(file, action = None)
-            if wall:
-                self.canvas.move(self.pet, -10, 0)
+                
 
-        elif action == "move_right":
+        elif nextAction == "move_right":
             file = moving_file[0]
             self.imageFileConfig(file, action = None)
-            if wall:
-                self.canvas.move(self.pet, 10, 0)
 
-
-        elif action == "sleep":
+        elif nextAction == "sleep":
             file = 'images/DevelonSleeping.gif'
             self.imageFileConfig(file, action = None)
             
             
-            
+        self.action = nextAction
         self.imageFileConfig(file, action = None)
 
     def move(self, moveIncrem):
         xinc = moveIncrem
+        print("xinc", xinc)
         change = 0
         flyingtime = random.randint(10,30)
         timeFlewn = 0
+        wall = False
         
         while timeFlewn != flyingtime:
             develonpos = self.canvas.coords(self.pet)
@@ -234,10 +247,13 @@ class petAnimations(object):
                 xinc = -xinc
                 timeFlewn  += 1
                 if al < abs(xinc):
-                    direction = "move_right-wall"
-                
+                    direction = "move_right"
+                    self.canvas.move(self.pet, 10, 0)
+                    
                 elif self.canvas_width - abs(xinc):
-                    direction = "move_left-wall"
+                    direction = "move_left"
+                    self.canvas.move(self.pet, -10, 0)
+                
                 self.next_gif(direction)
 
 
@@ -258,4 +274,5 @@ class petAnimations(object):
         
         #self.root.after_cancel(self.anim) 
         #self.eventStarter()
+
 

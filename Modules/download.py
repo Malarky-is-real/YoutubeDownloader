@@ -103,7 +103,8 @@ class downloadVideo(object):
         
     def fileMove(self, folder):
         vidTitle = downloadVideo.fileFix(self, Modules.YouTubeApi.getTitle(extract.video_id(self.video.watch_url)))
-        shutil.move(self.fullFile, os.path.join(folder, vidTitle + self.exten))
+        filePath = shutil.move(self.fullFile, os.path.join(folder, vidTitle + self.exten))
+        return filePath 
 
     def getFileName(self):
         return self.fullFile 

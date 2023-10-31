@@ -23,7 +23,7 @@ from mttkinter import *
 
 root = tk.Tk()
 #Setting the title, background color, and size of the tkinter window and
-root_height = 210
+root_height = 240
 root_width=400
 RootSize = root.geometry(f"{root_width}x{root_height}")
 
@@ -41,7 +41,7 @@ canvas_height = 100
 buttonFrame = tk.Frame(root, bg='red', width=canvas_width, height=canvas_height)
 canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, background="lightblue")
 canvas.grid(row=1, column=2, sticky=NSEW, padx=100)
-
+canvas.create_rectangle(0, 81, 220, 150, fill="red")
 
 startPosX=100
 startPosY=50
@@ -71,9 +71,11 @@ for i in range(len(actions)):
 
 buttonStart = tk.Button(buttonFrame, text="Event Start", command=lambda: develon.eventStarter(action = None)).grid(row=0, column=1)
 buttonStop = tk.Button(buttonFrame, text="Event Stop", command=lambda: develon.eventStopper()).grid(row=1, column=1)
-button = tk.Button(buttonFrame, text="Err_Animat", command=lambda: develon.next_gif("ERR", False)).grid(row=2, column=0, sticky="E")
+button = tk.Button(buttonFrame, text="Err_Animat", command=lambda: develon.next_gif("ERR")).grid(row=2, column=0, sticky="E")
 button = tk.Button(buttonFrame, text="Down_Finish", command=lambda: develon.finish()).grid(row=2, column=2, sticky="E")
 button = tk.Button(buttonFrame, text="Download", command=lambda: develon.downloadAnim()).grid(row=2, column=1)
 
+
 buttonFrame.grid(column=2, row=2, columnspan=2, rowspan=2)
 root.mainloop()
+
