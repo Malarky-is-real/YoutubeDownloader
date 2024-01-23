@@ -18,8 +18,7 @@ import time
 import random
 
 #import MTkinter
-from mttkinter import mtTkinter as tk
-from mttkinter import *
+
 
 root = tk.Tk()
 #Setting the title, background color, and size of the tkinter window and

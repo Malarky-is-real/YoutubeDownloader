@@ -2,17 +2,8 @@ from PIL import Image
 import tkinter as tk
 import random
 import time
-from threading import Event
 
 #Sets up all the different animation files for develon
-states = ["moving", "not_moving"]
-moving_state = ["move_left", "move_right"]
-idle_state = ["sleep", "idle"]
-moving_file = ['images/DevelonFlyingFlipped.gif', 'images/DevelonFlying.gif']
-idle_file = ['images/DevelonSleeping.gif', 'images/DevelonFlyingFlipped.gif', 'images/DevelonSleepingIdle.gif']
-downloading_files = ["images/DownloadingDevelon.gif",'images/DevelonComplete.gif']
-err_Files = ["images/Err.gif"]
-
 class petAnimations(object):
     def __init__(self, rootObject, canv):
         self.root  = rootObject
@@ -26,15 +17,17 @@ class petAnimations(object):
         self.canvas_width = 200
         self.canvas_height = 100
         self.IFCalreadyRan = False
-    
+        self.states = ["moving", "not_moving"]
+        self.moving_state = ["move_left", "move_right"]
+        self.idle_state = ["sleep", "idle"]
+        self.moving_file = ['images/DevelonFlyingFlipped.gif', 'images/DevelonFlying.gif']
+        self.idle_file = ['images/DevelonSleeping.gif', 'images/DevelonFlyingFlipped.gif', 'images/DevelonSleepingIdle.gif']
+        self.downloading_files = ["images/DownloadingDevelon.gif",'images/DevelonComplete.gif']
+        self.err_Files = ["images/Err.gif"]
+            
     def override(self):
         overridingAction = input("Input a new action: ")
-        print(overridingAction)
-        
 
-            
-
-    
     #Starts the animation loop  
     def eventStarter(self, action = None):
         direct = self.eventChange(action)
@@ -50,7 +43,7 @@ class petAnimations(object):
     
     def switchAnims(self, switchAction): 
         if switchAction == "switch_right":
-            print("move right")
+            
             self.imageFileConfig("images/DevelonTurnsRight.gif", "turn_right")
             
         if switchAction == "switch_left":
@@ -68,7 +61,7 @@ class petAnimations(object):
         if state == "moving":
             
             #Makes a random action from the moving states list the temporary action
-            tempAction = random.choice(moving_state)
+            tempAction = random.choice(self.moving_state)
             
             
             #Checks if the action was the previous action and if so it stops resetting entirely.
@@ -95,7 +88,7 @@ class petAnimations(object):
             
         #if not moving then choose between different idling states
         else: 
-            tempAction = random.choice(idle_state)
+            tempAction = random.choice(self.idle_state)
             moveinc = 0
             if tempAction == self.action:
                 del tempAction
@@ -108,7 +101,7 @@ class petAnimations(object):
         return moveinc
 
     def eventVerify(self, newEvent):
-        print(self.action, " --> ", newEvent)
+        #print(self.action, " --> ", newEvent)
         if newEvent == "move_left" and self.action == "move_right": 
             print("Changing")
             self.action = newEvent
@@ -117,7 +110,7 @@ class petAnimations(object):
             self.eventPauser(-1)
             
         elif newEvent == "move_right" and self.action == "move_left":
-            print("Changing")
+            #print("Changing")
             self.action = newEvent
             self.eventStopper()
             self.switchAnims("switch_right")
@@ -132,23 +125,23 @@ class petAnimations(object):
         if changeCheck:
             if action == "move_right":
                 self.action = "move_right"
-                file = moving_file[0]
+                file = self.moving_file[0]
                 
             elif action == "move_left":
                 self.action = "move_left"
-                file  = moving_file[1]
+                file  = self.moving_file[1]
 
             elif action == "sleep":
                 self.action = "sleep"
-                file  = idle_file[0]
+                file  = self.idle_file[0]
             
             elif action == "idle":
                 self.action = "idle"
-                file = idle_file[1]
+                file = self.idle_file[1]
             
             elif action == "Err":
                 self.action = "Err"
-                file = err_Files[0]
+                file = self.err_Files[0]
 
             self.imageFileConfig(file, action)
         
@@ -211,12 +204,12 @@ class petAnimations(object):
         file = "images/Err.gif"
         
         if nextAction == "move_left":
-            file = moving_file[1]
+            file = self.moving_file[1]
             self.imageFileConfig(file, action = None)
                 
 
         elif nextAction == "move_right":
-            file = moving_file[0]
+            file = self.moving_file[0]
             self.imageFileConfig(file, action = None)
 
         elif nextAction == "sleep":
@@ -229,7 +222,7 @@ class petAnimations(object):
 
     def move(self, moveIncrem):
         xinc = moveIncrem
-        print("xinc", xinc)
+        #print("xinc", xinc)
         change = 0
         flyingtime = random.randint(10,30)
         timeFlewn = 0
@@ -264,12 +257,12 @@ class petAnimations(object):
     def downloadAnim(self):
         if self.DevAnim != "":
             self.root.after_cancel(self.DevAnim)
-        file = downloading_files[0]
+        file = self.downloading_files[0]
         self.imageFileConfig(file, action = None)
         self.move(0)
 
     def finish(self): 
-        imgs, frames, action = self.imageFileConfig(downloading_files[1], action="finish")
+        imgs, frames, action = self.imageFileConfig(self.downloading_files[1], action="finish")
         self.animation(imgs, frames, cnt = 0, action = action)
         
         #self.root.after_cancel(self.anim) 

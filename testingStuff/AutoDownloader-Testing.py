@@ -30,16 +30,19 @@ YouYubeApi = YouTubeApi.YT_API()
 currentlydownloading.pack()
 downloadingprogress.pack()
 LoadPercent.pack()
-songs = Spot.spotiPlaylist("5ln8XN0mv5aufkiH4OZ3hq")
+
+
+songs = Spot.spotiPlaylistDownload("https://open.spotify.com/playlist/1klUYmADVLqF7JfReWHvp2?si=aa0593dad036466f")
 
 def threaders(songs):
-    q = queue.Queue()
-    threading.Thread(target=dl, args=(q,), daemon=True).start()
-    for t in range(0, len(songs)):  
-        q.put(songs[t])
+    #q = queue.Queue()
+    #threading.Thread(target=dl, args=(q,), daemon=True).start()
+    for t in range(0, len(songs)):
+        YouYubeApi.getTitle(extract.video_id(songs[t].watch_url))
+        #q.put(songs[t])
         
     #Used to stop the downloader once all the songs have been downloaded
-    q.put(None)
+    #q.put(None)
 
 def end():
     os._exit(0)

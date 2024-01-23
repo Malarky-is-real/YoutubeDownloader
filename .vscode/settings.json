@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./DownloaderModules/build/lib/Modules",
+        "./DownloaderModules-0.2/DownloaderModules"
+    ]
+}

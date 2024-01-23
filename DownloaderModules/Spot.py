@@ -3,7 +3,7 @@ import spotipy.util as util
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 from pytube import YouTube, Playlist
 from pytube import * 
-import csv
+import DownloaderModules.DataManagement as DataManagement
 
 cid = 'e2ba3be9797249cdae236e95cafa46aa'
 secret = '07949281789c4445851d5eb1b3b495cd'
@@ -14,6 +14,7 @@ scope = "user-library-read"
 auth_manager = spotipy.oauth2.SpotifyClientCredentials(
     client_id=cid,
     client_secret=secret
+    
 )
 token = auth_manager.get_access_token()
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
@@ -113,39 +114,18 @@ def spotiPlaylist(plID):
             tracks.extend(results['items'])
 
     results = tracks 
-    data = "" 
     toDownload = []
-    lastDownloaded = []
-    songlist = open('TextFiles\SavedSongs.txt', 'r+', encoding="utf-8")
-    read = songlist.readlines()
-    
-    for line in read:
-        
-        if "*" in line[0]:
-            lastDownloaded.append(line)
-            line = line.replace("*", "", 1)
-        
-        data += line
-    
+    songlist = DataManagement.dataFile("TextFiles/savedSongs.csv")
     for num in range(len(results)):
         currSong = results[num]['track']['name']
         artist_uri = results[num]['track']['artists'][0]['name']
-
-        if f"{currSong} - {artist_uri}" not in data:
-            filesong = f"*{currSong} - {artist_uri}"
-            song = f"{artist_uri} - {currSong}"
-            toDownload.append(song)
-            data += filesong + "\n"
-    
-    songlist.close()
-    
-    
-    songListChange = open('TextFiles\SavedSongs.txt', 'w', encoding="utf-8")
-    songListChange.write(data)
-    songListChange.close()
-
+        
+        if not songlist.checkExist(currSong, artist_uri, results[num]['track']['album']["name"]):
+            toDownload.append(f"{currSong} - {artist_uri}")
+    songlist.appendToCSV()            
 
     SongLinks = []
+
     for i in toDownload:
 
         try:
@@ -155,10 +135,11 @@ def spotiPlaylist(plID):
             SongLinks.append(YouTube(s.results[0].watch_url, use_oauth=True, allow_oauth_cache=True ))
 
         except:
+    
             print(i + " not found, please find manually sorry")
     return SongLinks
 
-
+"""
 def getEverything(plID):
     if "playlist" in plID:
         
@@ -177,6 +158,5 @@ def getEverything(plID):
             results = tracks
             for num in range(len(results)):
                 writer.writerow([results[num]['track']['name'], results[num]['track']['artists'][0]['name'], results[num]['track']['album']["name"] ])
+"""
 
-            
-#getEverything("https://open.spotify.com/playlist/7AlH1EbTWk4zFh8FQfWI17?si=f384b75584564109")

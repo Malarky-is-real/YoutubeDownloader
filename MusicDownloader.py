@@ -22,26 +22,23 @@ from pytube import YouTube, Playlist
 from pytube import * 
 from pytube import extract
 
+import os
 
 #Importing Random
 import random
 
-
-
 #Modules
-from Modules.Spot import * 
+import DownloaderModules.Spot as Spot
 
 #importing Json
 import json
 
-from Modules.YouTubeApi import *
-
-import Modules.download as download
-
-import Modules.animations as DevAnim
-
-
+#YouTube Module
+import DownloaderModules.YouTubeApi as youtube_api
+import DownloaderModules.download as download
+import DownloaderModules.animations as DevAnim
 #Functions at the top non functions at the very bottom
+
 
 #Gets the urls of all the videos in the list
 def loadData(ran):
@@ -61,33 +58,34 @@ def loadData(ran):
     
     #Seperates the video links into their respective locations
     for music in songLinks:
-        try: 
-            if "youtube.com/playlist?list" in music or "&list" in music:
-                songsNames.append(Playlist(music).title + " - Youtube Playlist")
-            
-            elif "https://open.spotify.com/playlist" in music:
-                songsNames.append(getPlaylistName(music) + " - Spotify Playlist")
-
-            elif "open.spotify.com/album" in music:
-                songsNames.append(getAlbumName(music) + " - Spotify Album")
-            
-            else:
-                songsNames.append(getTitle(extract.video_id(music)) + " - " + YouTube(music, use_oauth=True, allow_oauth_cache=True ).author)
+        #try: 
+        if "youtube.com/playlist?list" in music or "&list" in music:
+            songsNames.append(Playlist(music).title + " - Youtube Playlist")
         
+        elif "https://open.spotify.com/playlist" in music:
+            songsNames.append(Spot.getPlaylistName(music) + " - Spotify Playlist")
+
+        elif "open.spotify.com/album" in music:
+            songsNames.append(Spot.getAlbumName(music) + " - Spotify Album")
+        
+        else:
+            print(YouTube_API.getTitle(extract.video_id(music)))
+            songsNames.append((YouTube_API.getTitle(extract.video_id(music))) + " - " + YouTube(music, use_oauth=True, allow_oauth_cache=True ).author)
+        """
         except:
             if "www.youtube.com/playlist?list" in music or "&list" in music:
-                songsNames.append("Youtube Playlist")
+                songsNames.append(music)
             
-            elif "spotify.com/playlist" in music:
-                songsNames.append("Spotify Playlist")
+            elif "open.spotify.com/playlist" in music:
+                songsNames.append(music)
 
             elif "open.spotify.com/album" in music:
-                songsNames.append("Spotify Album")
+                songsNames.append(music)
                 
             else:
-                songsNames.append("Youtube Video")
+                songsNames.append(music)
             continue
-
+        """
     for locations in locationPath:
         locationNames.append(os.path.basename(locations))
     
@@ -103,8 +101,9 @@ def loadData(ran):
 def jsonUpdate(bigvalue,  value, widget = None, list= None, widgetGet = None ): 
     
     if bigvalue == "songs":
-        if widget.get() not in list:
-            list.append(widget.get())
+        a = widget.get()
+        if a not in list:
+            list.append(a)
             data[bigvalue][0][value] = list
             music = json.dumps(data, indent = 4)
             with open('TextFiles/Links.json', 'w') as outfile:
@@ -117,6 +116,7 @@ def jsonUpdate(bigvalue,  value, widget = None, list= None, widgetGet = None ):
             outfile.write(music)
     
     loadData(1)
+    
 
 def showLinks():    
     def deleteLinksSelected (event):
@@ -126,6 +126,7 @@ def showLinks():
              
         main.bind('<BackSpace>', delete)
         currItem = nameLinkShower.selection()[0] 
+        
     def finishUp(event):
         songLinks = []
         locationPath = []
@@ -180,7 +181,7 @@ def showLinks():
     
     main.bind('<Return>', finishUp)    
     nameLinkShower.bind('<<TreeviewSelect>>', deleteLinksSelected)
-    nameLinkShower.grid(column=4, row=1, columnspan=5, sticky=N+S+W+E)
+    nameLinkShower.grid(column=4, row=1, columnspan=5, sticky=N+S+W+E, padx=20)
 
 
 #Lets you browse for the folder you want to put the songs in. 
@@ -214,8 +215,7 @@ def PLChecker():
     
     if linkEntry.get() in songsNames or linkEntry.get() in songLinks: 
         PL_link = songLinks[linkEntry.current()]
-        
-        
+
     else:
         PL_link = linkEntry.get()
         jsonUpdate('songs', 'song', linkEntry, songLinks,widgetGet=PL_link )
@@ -232,7 +232,7 @@ def PLChecker():
 
     #checks what site the link is from and uses the proper methods to prepare for downloading.
     if "spotify" in PL_link:
-        songUrl = spotiPlaylistDownload(PL_link)
+        songUrl = Spot.spotiPlaylistDownload(PL_link)
     
     elif "list" in PL_link:
         p = Playlist(PL_link)
@@ -244,7 +244,7 @@ def PLChecker():
 
     elif "youtu" in PL_link:
         p = YouTube(PL_link, use_oauth=True, allow_oauth_cache=True)
-        titleOrig = getTitle(extract.video_id(p.watch_url))
+        titleOrig = YouTube_API.getTitle(extract.video_id(p.watch_url))
         songUrl.append(p)
         
     if showVideos.alreadyExist == False:
@@ -252,7 +252,7 @@ def PLChecker():
           
     elif showVideos.alreadyExist == True:
         
-        addtoList = askyesnocancel(title="Add to current queue?", message="Add " + "\u0332".join(titleOrig) + " to your Queue?\nCancel to replace the queue")
+        addtoList = askyesnocancel(title="Add to current queue?", message="Add " + "\u0332".join(titleOrig) + " to your Queue?\nCancel to replace the current queue")
         
         if addtoList:
             showVids.addon(songUrl)
@@ -286,7 +286,7 @@ class showVideos(object):
         musicBoxes = []
         
         #set up variables for the videos box. 
-        main.geometry(f"1100x{Main_height}")
+        main.geometry(f"1000x{Main_height}")
         Videos = ttk.Frame(main,height=280, width=240, )
         textBox = ScrolledText(Videos, height=10, width=50)
         #Videos.columnconfigure(1, weight=1)
@@ -296,13 +296,8 @@ class showVideos(object):
             clickedNew = StringVar(value=clicked.get())
             currentVar = IntVar(value=1)
             
-            tempTitle = getTitle(extract.video_id(self.musictitles[vids].watch_url))
-            if len(tempTitle) > 41:
-                title = f'{tempTitle[0:38]}...'
-            else:
-                title = tempTitle
-            current_box = ttk.Checkbutton(textBox, text=title, variable=currentVar)
-            ttkwidgets.frames.Balloon(current_box, headertext="help", text=tempTitle, timeout=.5)
+            current_box = ttk.Checkbutton(textBox, text=f'{YouTube_API.getTitle(extract.video_id(self.musictitles[vids].watch_url))[0:38]}...', variable=currentVar)
+            ttkwidgets.frames.Balloon(current_box, headertext="help", text=YouTube_API.getTitle(extract.video_id(self.musictitles[vids].watch_url)), timeout=.5)
             currentExten = OptionMenu(textBox, clickedNew, *options)
             vidLinkButton = ttk.Button(textBox, text=vids+1, command= lambda k = vids:  self.changeLink(k, self.musictitles))
             
@@ -330,7 +325,9 @@ class showVideos(object):
     
     #Changes the link of the selected video 
     def changeLink(self, ind, musictitles):      
+        
         Videos.config(height=1000, width=1000)
+        main.geometry(f"1200x{Main_height}")
         vidTitle = musictitles[ind].watch_url
         linkLabel = Label(Videos, text="Video link " + str(ind+1))
         linkChange = tk.Entry(Videos, textvariable=vidTitle, width=30)
@@ -347,9 +344,6 @@ class showVideos(object):
         def update(link, ind, musictitles):
             Videos.destroy()
             musictitles[ind] = YouTube(link, use_oauth=True, allow_oauth_cache=True)
-            linkLabel.grid_forget()
-            linkChange.grid_forget()
-            linkChangeButton.grid_forget()
             showVideos(musictitles).mainShow()
             #main.geometry(height=280, width=240)
     
@@ -365,9 +359,9 @@ class showVideos(object):
                 songTitleFinal.append(self.musictitles[box])
                 
         #Gets all the videos that are checked and puts their exstenions type into a list.
-        for bo in range (len(checkboxes)):
-            if musicBoxes[bo].var.get() == 1:
-                songExten.append(checkboxes[bo].var.get())
+        for box2 in range (len(checkboxes)):
+            if musicBoxes[box2].var.get() == 1:
+                songExten.append(checkboxes[box2].var.get())
             
         
         #Removes video box  
@@ -402,38 +396,42 @@ def Downloader(q):
         values = q.get()
         #Stops the downloader once all the files have been downloaded or inputs the files and extensions to be downloaded. 
         if values[0] == None:
+            q.task_done()
             break
 
         else:
             vid = values[0]
             exten = values[1]
-            currentlyDownloading['text'] = getTitle(extract.video_id(vid.watch_url))
+            if len(YouTube_API.getTitle(extract.video_id(vid.watch_url))) > 26: 
+                currentlyDownloading['text'] = f'{YouTube_API.getTitle(extract.video_id(vid.watch_url))[0:25]}...'
+            else: 
+                currentlyDownloading['text'] = YouTube_API.getTitle(extract.video_id(vid.watch_url))
 
         downloadBtn["state"] = "disabled"
         
         #Downloads the video(s) and puts them in a temporary file so that they can be changed correctly
-        
-        currentVidDL = download.downloadVideo(vid, exten, True ,progressbar, LinkLabel, loadingPercent)
-        currentVidDL.Downloader()
-        currentVidDL.fileMove(outputLocation)
-        
 
+        currentVidDL = download.downloadVideo(vid, exten, True ,progressbar, LinkLabel, loadingPercent)
+        currentVidDL.Downloader()   
+        currentVidDL.fileMove(outputLocation)
+
+        
         #Moves onto the next song or stops entirely.
         q.task_done()
     
     #Moves onto the finishing animation and stops the downloading. 
-    finish()
     q.join()
+    finish()
+    
 
 
 #Animation Functions
 def downloadAnim(STF, STE):
-    global showVids
     noteBook.config(height=Main_height, width=Main_width-190)    
     LinkLabel.configure(text="Loading")
     currentlyDownloading.grid(row=0, column=2, sticky= S)
     loadingPercent.grid(row=1, column=2, sticky=N, pady=10)
-    progressbar.grid(row=1, column=2, sticky=N, pady=35)
+    progressbar.grid(row=1, column=2, sticky=N, pady=35, padx=10)
     DevelonAnim.eventStopper()
     DevelonAnim.downloadAnim()
     threaders(STF, STE)
@@ -445,7 +443,7 @@ def finish():
         String = ""
         
         for i in range(len(errsSongs)):
-            String += f"{getTitle(extract.video_id(errsSongs[i]))} \n"
+            String += f"{YouTube_API.getTitle(extract.video_id(errsSongs[i]))} \n"
         
         download2 = askyesno("Downloading Error", message=String)
         if download2:
@@ -460,6 +458,7 @@ def finish():
     progressbar.grid_forget()
     loadingPercent.grid_forget()
     LinkLabel.configure(text="Youtube Link")
+    print("bruh")
     time.sleep(5)
     DevelonAnim.eventStarter()
 
@@ -489,17 +488,17 @@ def getSongsTBD():
 
     
     if playlistTBD != playlistInfo:
-        warning  = askquestion(root2, message="Are you sure you want to make " + getPlaylistName(playlistTBD) + " your playlist to be upkept" )
+        warning  = askquestion(root2, message="Are you sure you want to make " + Spot.getPlaylistName(playlistTBD) + " your playlist to be upkept" )
         if warning == "yes":
             jsonUpdate('playlistStuff', 'playlist', widgetGet=playlistTBD)
         
-    songUrl = spotiPlaylist(playlistTBD)
+    songUrl = Spot.spotiPlaylist(playlistTBD)
     if showVideos.alreadyExist == False:
         showVids = showVideos(songUrl) 
           
     if showVideos.alreadyExist == True:
         
-        addtoList = askyesnocancel("Crossroads", f"Would you like to add {getPlaylistName(playlistTBD) } to your songsTBD? \n cancel to replace the current selection with the new one")
+        addtoList = askyesnocancel("Crossroads", f"Would you like to add {Spot.getPlaylistName(playlistTBD) } to your songsTBD? \n cancel to replace the current selection with the new one")
         if addtoList == True:
             showVids.addon(songUrl)
             return 
@@ -528,7 +527,9 @@ noteBook.add(root, text="Main Downloader")
 root2 = Frame(noteBook, background="grey", height=Main_height, width=Main_width)
 noteBook.add(root2, text="Spotify Upkeep")
 
+YouTube_API = youtube_api.YT_API()
 songsNames, songLinks, locationNames, locationPath, playlistInfo, playlistName, data = loadData(0)
+
 
 #Top name of the downloader. 
 heading=Label(root, text = "Song Downloader", justify=CENTER, padx=14, pady=15, font="15", width = 19)
@@ -586,10 +587,7 @@ loadingPercent = tk.Label(main, text="0%", font=("Agency FB", 10))
 
 #All under this are for Develon
 #Develon window Set up
-
-canvas_width = 200
-canvas_height = 100
-canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, bg="lightblue")
+canvas = tk.Canvas(root, width=200, height=100, bg="lightblue")
 canvas.grid(row=1, column=2)
 DevelonAnim = DevAnim.petAnimations(main, canvas)
 DevelonAnim.eventStarter(action=None)
@@ -598,11 +596,11 @@ showVideos.alreadyExist = False
 
 #Root 2 ----------------------------------------
 heading2=Label(root2, text = "Spotify Upkeeper", padx=14, pady=15, font="15", width = 19)
-heading2.grid(row = 0, column = 2, pady=5 )
+heading2.grid(row = 0, column = 2, pady=5)
     
 playlistEntryLink = tk.StringVar()
 
-playlistCanvas = tk.Canvas(root2, width=canvas_width, height=canvas_height, bg="lightblue")
+playlistCanvas = tk.Canvas(root2, width=200, height=100, bg="lightblue")
 playlistCanvas.grid(row=1, column=2)
 
 playlistLinkLabel=Label(root2, text='Playlist Link')
@@ -623,10 +621,4 @@ browser2.grid(row=3, column=3)
 downloadBtn = ttk.Button(root2, text="Download", command=lambda: getSongsTBD())
 downloadBtn.grid(row=4, column=2)
 
-
-
-#eventStarter(action = None)
-
-
-#Starts gui window
 main.mainloop()
